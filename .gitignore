@@ -1,0 +1,9 @@
+# Python script logs
+log.txt
+
+# Saved images
+auto_imgs/*
+man_imgs/*
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/*
