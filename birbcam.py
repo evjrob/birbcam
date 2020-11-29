@@ -2,11 +2,14 @@ from astral import LocationInfo
 from astral.sun import sun
 import cv2 as cv
 import datetime as dt
+from fastai.vision.all import *
 import logging
+import multiprocessing as mp
 import numpy as np
+from PIL import Image
+import pytz
 from scipy.signal import medfilt2d
 import time
-import pytz
 
 
 # Set up logging
@@ -22,8 +25,11 @@ logging.basicConfig(
 # Timezone for python datetime objects
 tz = pytz.timezone('America/Edmonton')
 
+# Datetime format for printing and string representation
+dt_fmt = '%Y-%m-%d_%H:%M:%S'
+
 # Where to save captured frames with changes
-save_dir = 'auto_imgs/'
+save_dir = 'local_test_imgs/'
 
 # Create the Videoapture object for the webcam
 capture = cv.VideoCapture()
@@ -33,7 +39,7 @@ capture.set(cv.CAP_PROP_FPS, 1)
 city = LocationInfo("Calgary", "Canada", "America/Edmonton", 51.049999, -114.066666) 
 
 
-def camera_loop(stop_time):
+def camera_loop(queue, stop_time):
     # Model params
     # https://docs.opencv.org/master/d1/dc5/tutorial_background_subtraction.html
     mask_thresh = 255   # Threhold for foreground mask: 255 indicates objects
@@ -49,20 +55,22 @@ def camera_loop(stop_time):
     current_time = dt.datetime.now(tz=tz)
     while current_time <= stop_time:
         current_time = dt.datetime.now(tz=tz)
-        timestamp = current_time.strftime('%Y-%m-%d_%H:%M:%S')
-        _, frame = capture.read()
-        frame = np.rot90(frame, k=-1)
-        fgMask = backSub.apply(frame, learningRate=lr)
-        if i < burn_in:
-            i += 1
-            continue
-        
-        # Threshold mask
-        fgMaskMedian = medfilt2d(fgMask, kernel_size)
-        if (fgMaskMedian >= mask_thresh).any():
-            filename = f'{save_dir}{timestamp}.jpg'
-            cv.imwrite(filename, frame)
-            logging.info('Wrote file ' + filename) 
+        timestamp = current_time.strftime(dt_fmt)
+        ret, frame = capture.read()
+        if ret:
+            frame = np.rot90(frame, k=-1)
+            fgMask = backSub.apply(frame, learningRate=lr)
+            if i < burn_in:
+                i += 1
+                continue
+
+            # Threshold mask
+            fgMaskMedian = medfilt2d(fgMask, kernel_size)
+            if (fgMaskMedian >= mask_thresh).any():
+                # Put the frame and corresponding timestamp into the 
+                # queue to be processed by the fastai models
+                queue.put((frame, timestamp))
+                logging.info(f'Passed image with timestamp {timestamp} for processing')
     
     # Release the webcam        
     capture.release()
@@ -77,7 +85,7 @@ def night_pause_loop(stop_time):
         time.sleep((time_diff_seconds // 2) + 1)
 
 
-def main_loop():
+def main_loop(queue):
     while True:
         # Figure out when to run the webcam based on dawn and dusk today
         current_time = dt.datetime.now(tz=tz)
@@ -87,21 +95,49 @@ def main_loop():
         
         # If current time is less than dawn today, then wait until then
         if current_time < today_dawn:
-            logging.info(f'Delaying the cature of images until dawn at {today_dawn}')
+            logging.info(f'Delaying the cature of images until dawn at {today_dawn:{dt_fmt}}')
             night_pause_loop(today_dawn)
         
         # We can capture images, start the camera loop until dusk today
         elif current_time >= today_dawn and current_time <= today_dusk:
-            logging.info(f'Capturing images until dusk at {today_dusk}')
-            camera_loop(today_dusk)
+            logging.info(f'Capturing images until dusk at {today_dusk:{dt_fmt}}')
+            camera_loop(queue, today_dusk)
         
         # Pause image capture until dawn tomorrow
         elif current_time > today_dusk:
             tomorrow_sun_times = sun(city.observer, date=dt.datetime.now(tz=tz) + dt.timedelta(days=1), tzinfo=tz)
             tomorrow_dawn = tomorrow_sun_times['dawn']
-            logging.info(f'Delaying the cature of images until dawn at {tomorrow_dawn}')
+            logging.info(f'Delaying the cature of images until dawn at {tomorrow_dawn:{dt_fmt}}')
             night_pause_loop(tomorrow_dawn)
+
+            
+def image_processor(queue):
+    learn = load_learner('models/birbcam_prod.pkl')
+    x = None
+    while True:
+        x = queue.get()
+        # Get the frame and timestamp for the image to be processed
+        frame, timestamp = x
+        logging.debug(f'Processing image with timestamp {timestamp}')
+        # Convert the OpenCV image from BGR to RGB for fastai
+        rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+        # Get the predicted label
+        label = learn.predict(rgb_frame)[0]
+        # Save the image with time stamp and label
+        filename = f'{save_dir}{timestamp}_{label}.jpg'
+        cv.imwrite(filename, frame)
+        logging.info(f'Processed image with timestamp {timestamp} and found label {label}')
+
+
+def main():
+    q = mp.Queue()
+    p1 = mp.Process(target=main_loop, args=(q,))
+    p2 = mp.Process(target=image_processor, args=(q,))
+    p1.start()
+    p2.start()
+    p1.join()
+    p2.join()
 
 
 if __name__ == '__main__':
-    main_loop()
+    main()
