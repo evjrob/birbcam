@@ -5,5 +5,8 @@ log.txt
 auto_imgs/*
 man_imgs/*
 
+# Model artifacts
+models/*
+
 # Jupyter notebook checkpoints
 .ipynb_checkpoints/*
