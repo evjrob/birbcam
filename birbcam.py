@@ -130,6 +130,9 @@ def image_processor(queue):
 
 
 def main():
+    # Use a multiprocessing queue to offload slow image processing 
+    # to other processes/cores and keep the camera_loop from being 
+    # blocked and missing frames.
     q = mp.Queue()
     p1 = mp.Process(target=main_loop, args=(q,))
     p2 = mp.Process(target=image_processor, args=(q,))
