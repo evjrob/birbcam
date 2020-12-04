@@ -27,7 +27,7 @@ tz = pytz.timezone('America/Edmonton')
 utc_tz = pytz.timezone('UTC')
 
 # Datetime format for printing and string representation
-dt_fmt = '%Y-%m-%d_%H:%M:%S'
+dt_fmt = '%Y-%m-%dT%H:%M:%S'
 
 # Where to save captured frames with changes
 save_dir = 'imgs/'
@@ -57,7 +57,7 @@ def camera_loop(queue, stop_time):
     while current_time <= stop_time:
         current_time = dt.datetime.now(tz=tz)
         timestamp = current_time.strftime(dt_fmt)
-        utc_timestamp = dt.datetime.now(tz=utc_tz).strftime('%Y-%m-%dT%H:%M:%S')
+        utc_timestamp = dt.datetime.now(tz=utc_tz).strftime(dt_fmt)
         ret, frame = capture.read()
         if ret:
             frame = np.rot90(frame, k=-1)
