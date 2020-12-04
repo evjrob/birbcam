@@ -2,9 +2,7 @@
 log.txt
 
 # Saved images
-auto_imgs/*
-man_imgs/*
-local_test_imgs/*
+imgs/*
 
 # Model artifacts
 models/*

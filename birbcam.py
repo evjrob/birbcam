@@ -29,7 +29,7 @@ tz = pytz.timezone('America/Edmonton')
 dt_fmt = '%Y-%m-%d_%H:%M:%S'
 
 # Where to save captured frames with changes
-save_dir = 'local_test_imgs/'
+save_dir = 'imgs/'
 
 # Create the Videoapture object for the webcam
 capture = cv.VideoCapture()
