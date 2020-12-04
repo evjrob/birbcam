@@ -9,6 +9,7 @@ import numpy as np
 from PIL import Image
 import pytz
 from scipy.signal import medfilt2d
+import sqlite3
 import time
 
 
@@ -35,6 +36,9 @@ save_dir = 'imgs/'
 # Create the Videoapture object for the webcam
 capture = cv.VideoCapture()
 capture.set(cv.CAP_PROP_FPS, 1)
+
+# Database
+conn = sqlite3.connect('data/model_results.db', timeout=15)
     
 # Create the astral city location object
 city = LocationInfo("Calgary", "Canada", "America/Edmonton", 51.049999, -114.066666) 
@@ -131,11 +135,9 @@ def image_processor(queue):
         filename = f'{save_dir}{timestamp}_{label}.jpg'
         cv.imwrite(filename, frame)
         # Write results to sqlite3 database
-        conn = sqlite3.connect('data/model_results.db', timeout=15)
-        c = conn.cursor()
-        c.execute("INSERT INTO results VALUES (?,?,?,?,?,?)", 
+        with conn:
+            conn.execute("INSERT INTO results VALUES (?,?,?,?,?,?)", 
                   (utc_timestamp, timestamp, filename, label, confidence, None))
-        conn.commit()
         logging.info(f'Processed image with timestamp {timestamp} and found label {label}')
 
 
