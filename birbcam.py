@@ -24,6 +24,7 @@ logging.basicConfig(
 
 # Timezone for python datetime objects
 tz = pytz.timezone('America/Edmonton')
+utc_tz = pytz.timezone('UTC')
 
 # Datetime format for printing and string representation
 dt_fmt = '%Y-%m-%d_%H:%M:%S'
@@ -56,6 +57,7 @@ def camera_loop(queue, stop_time):
     while current_time <= stop_time:
         current_time = dt.datetime.now(tz=tz)
         timestamp = current_time.strftime(dt_fmt)
+        utc_timestamp = dt.datetime.now(tz=utc_tz).strftime('%Y-%m-%dT%H:%M:%S')
         ret, frame = capture.read()
         if ret:
             frame = np.rot90(frame, k=-1)
@@ -69,7 +71,7 @@ def camera_loop(queue, stop_time):
             if (fgMaskMedian >= mask_thresh).any():
                 # Put the frame and corresponding timestamp into the 
                 # queue to be processed by the fastai models
-                queue.put((frame, timestamp))
+                queue.put((frame, timestamp, utc_timestamp))
                 logging.info(f'Passed image with timestamp {timestamp} for processing')
     
     # Release the webcam        
@@ -117,15 +119,23 @@ def image_processor(queue):
     while True:
         x = queue.get()
         # Get the frame and timestamp for the image to be processed
-        frame, timestamp = x
+        frame, timestamp, utc_timestamp = x
         logging.debug(f'Processing image with timestamp {timestamp}')
         # Convert the OpenCV image from BGR to RGB for fastai
         rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-        # Get the predicted label
-        label = learn.predict(rgb_frame)[0]
+        # Get the predicted label and confidence
+        pred = learn.predict(rgb_frame)
+        label = pred[0]
+        confidence = float(pred[2].numpy().max())
         # Save the image with time stamp and label
         filename = f'{save_dir}{timestamp}_{label}.jpg'
         cv.imwrite(filename, frame)
+        # Write results to sqlite3 database
+        conn = sqlite3.connect('data/model_results.db', timeout=15)
+        c = conn.cursor()
+        c.execute("INSERT INTO results VALUES (?,?,?,?,?,?)", 
+                  (utc_timestamp, timestamp, filename, label, confidence, None))
+        conn.commit()
         logging.info(f'Processed image with timestamp {timestamp} and found label {label}')
 
 
