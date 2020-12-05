@@ -132,8 +132,9 @@ def image_processor(queue):
         label = pred[0]
         confidence = float(pred[2].numpy().max())
         # Save the image with time stamp and label
-        filename = f'{save_dir}{timestamp}_{label}.jpg'
-        cv.imwrite(filename, frame)
+        filename = f'{timestamp}_{label}.jpg'
+        filepath = f'{save_dir}{timestamp}_{label}.jpg'
+        cv.imwrite(filepath, frame)
         # Write results to sqlite3 database
         with conn:
             conn.execute("INSERT INTO results VALUES (?,?,?,?,?,?)", 
