@@ -126,7 +126,7 @@ def main_loop(queue):
 
 
             
-def image_processor(queue, db_path=db_path, save_dir=save_dir, model_path=model_path,):
+def image_processor(queue, db_path=db_path, save_dir=save_dir, model_path=model_path):
     learn = load_learner(model_path)
     x = None
     while True:

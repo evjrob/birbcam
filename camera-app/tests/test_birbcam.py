@@ -26,6 +26,8 @@ def test_image_processor():
     q.put(x)
     p.join(5)
 
+    time.sleep(5)
+
     conn = sqlite3.connect(test_db, timeout=60)
     c = conn.cursor()
     c.execute("SELECT COUNT(*) FROM results WHERE utc_datetime=?;", (utc_timestamp,))
@@ -36,8 +38,9 @@ def test_image_processor():
     conn.commit()
     conn.close()
 
-    assert count == 1, "Did not find the expected row in the database!"
-
     q.close()
     p.terminate()
+
+    assert count == 1, "Did not find the expected row in the database!"
+
     return
