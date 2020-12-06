@@ -11,6 +11,7 @@ import pytz
 from scipy.signal import medfilt2d
 import sqlite3
 import time
+import traceback
 
 
 # Set up logging
@@ -93,53 +94,62 @@ def night_pause_loop(stop_time):
 
 def main_loop(queue):
     while True:
-        # Figure out when to run the webcam based on dawn and dusk today
-        current_time = dt.datetime.now(tz=tz)
-        today_sun_times = sun(city.observer, date=dt.datetime.now(tz=tz), tzinfo=tz)
-        today_dawn = today_sun_times['dawn']
-        today_dusk = today_sun_times['dusk']
-        
-        # If current time is less than dawn today, then wait until then
-        if current_time < today_dawn:
-            logging.info(f'Delaying the cature of images until dawn at {today_dawn:{dt_fmt}}')
-            night_pause_loop(today_dawn)
-        
-        # We can capture images, start the camera loop until dusk today
-        elif current_time >= today_dawn and current_time <= today_dusk:
-            logging.info(f'Capturing images until dusk at {today_dusk:{dt_fmt}}')
-            camera_loop(queue, today_dusk)
-        
-        # Pause image capture until dawn tomorrow
-        elif current_time > today_dusk:
-            tomorrow_sun_times = sun(city.observer, date=dt.datetime.now(tz=tz) + dt.timedelta(days=1), tzinfo=tz)
-            tomorrow_dawn = tomorrow_sun_times['dawn']
-            logging.info(f'Delaying the cature of images until dawn at {tomorrow_dawn:{dt_fmt}}')
-            night_pause_loop(tomorrow_dawn)
+        try:
+            # Figure out when to run the webcam based on dawn and dusk today
+            current_time = dt.datetime.now(tz=tz)
+            today_sun_times = sun(city.observer, date=dt.datetime.now(tz=tz), tzinfo=tz)
+            today_dawn = today_sun_times['dawn']
+            today_dusk = today_sun_times['dusk']
+            
+            # If current time is less than dawn today, then wait until then
+            if current_time < today_dawn:
+                logging.info(f'Delaying the cature of images until dawn at {today_dawn:{dt_fmt}}')
+                night_pause_loop(today_dawn)
+            
+            # We can capture images, start the camera loop until dusk today
+            elif current_time >= today_dawn and current_time <= today_dusk:
+                logging.info(f'Capturing images until dusk at {today_dusk:{dt_fmt}}')
+                camera_loop(queue, today_dusk)
+            
+            # Pause image capture until dawn tomorrow
+            elif current_time > today_dusk:
+                tomorrow_sun_times = sun(city.observer, date=dt.datetime.now(tz=tz) + dt.timedelta(days=1), tzinfo=tz)
+                tomorrow_dawn = tomorrow_sun_times['dawn']
+                logging.info(f'Delaying the cature of images until dawn at {tomorrow_dawn:{dt_fmt}}')
+                night_pause_loop(tomorrow_dawn)
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            pass
+
 
             
 def image_processor(queue):
     learn = load_learner('models/birbcam_prod.pkl')
     x = None
     while True:
-        x = queue.get()
-        # Get the frame and timestamp for the image to be processed
-        frame, timestamp, utc_timestamp = x
-        logging.debug(f'Processing image with timestamp {timestamp}')
-        # Convert the OpenCV image from BGR to RGB for fastai
-        rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-        # Get the predicted label and confidence
-        pred = learn.predict(rgb_frame)
-        label = pred[0]
-        confidence = float(pred[2].numpy().max())
-        # Save the image with time stamp and label
-        filename = f'{timestamp}_{label}.jpg'
-        filepath = f'{save_dir}{timestamp}_{label}.jpg'
-        cv.imwrite(filepath, frame)
-        # Write results to sqlite3 database
-        with conn:
-            conn.execute("INSERT INTO results VALUES (?,?,?,?,?,?)", 
-                  (utc_timestamp, timestamp, filename, label, confidence, None))
-        logging.info(f'Processed image with timestamp {timestamp} and found label {label}')
+        try:
+            x = queue.get()
+            # Get the frame and timestamp for the image to be processed
+            frame, timestamp, utc_timestamp = x
+            logging.debug(f'Processing image with timestamp {timestamp}')
+            # Convert the OpenCV image from BGR to RGB for fastai
+            rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+            # Get the predicted label and confidence
+            pred = learn.predict(rgb_frame)
+            label = pred[0]
+            confidence = float(pred[2].numpy().max())
+            # Save the image with time stamp and label
+            filename = f'{timestamp}_{label}.jpg'
+            filepath = f'{save_dir}{timestamp}_{label}.jpg'
+            cv.imwrite(filepath, frame)
+            # Write results to sqlite3 database
+            with conn:
+                conn.execute("INSERT INTO results VALUES (?,?,?,?,?,?)", 
+                    (utc_timestamp, timestamp, filename, label, confidence, None))
+            logging.info(f'Processed image with timestamp {timestamp} and found label {label}')
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            pass
 
 
 def main():
