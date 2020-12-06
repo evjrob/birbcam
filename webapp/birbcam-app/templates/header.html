@@ -1,0 +1,25 @@
+{% set active_page = active_page|default('index') -%}
+
+{% set navigation_bar = [
+  ('/', 'index', 'Visualization'),
+  ('/eval', 'eval', 'Model Evaluation'),
+] -%}
+
+<title>Birb Cam</title>
+
+<div>  
+  <header>
+    <!-- Navigation Bar -->
+    <div class="topnav">
+      {% for href, id, caption in navigation_bar %}
+          <a {% if id == active_page %} class="active"{% endif %} href="{{ href|e }}">{{ caption|e }}</a>
+      {% endfor %}
+    </div>
+    <div class="container">
+      <div class="row"> 
+        <!-- Title -->
+        <h1>Birb Cam</h1>
+      </div>
+    </div>
+  </header>
+</div>

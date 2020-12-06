@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+{% set active_page = "eval" %}
+{% include "header.html" %}
+
+<div>
+<main>    
+    <section>
+    <header>
+        <div class="container">
+            <h3>Model Evaluation</h3>
+            <div class="progress">
+                <div class="progress-bar" role="progressbar" style="width: {{progress}};" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">{{progress}} Complete</div>
+            </div>
+            {% if show_eval %}
+            <table>
+            <tr>
+            <td>
+            <p>
+                {{filename}} Original/ Equalized Images:
+            </p>   
+            <img src="{{img}}" width='800'>
+            </td>
+            <td class='left-padded'>
+            <p>
+                Model selected a label of: {{label}}
+            </p>
+            <form name="model_eval" action="./api/model_eval_submit" method="POST" onsubmit="">
+                <input type='hidden' name='utc_key' id='utc_key' value={{utc_key}}>
+                <p>
+                    Please select the correct label:
+                </p>
+                <p>
+                    <input type="radio" name="label" id="none" value="none"> none </input><br>
+                    <input type="radio" name="label" id="sparrow" value="sparrow"> sparrow </input><br>
+                    <input type="radio" name="label" id="chickadee" value="chickadee"> chickadee </input><br>
+                    <input type="radio" name="label" id="magpie" value="magpie"> magpie </input><br>
+                    <input type="radio" name="label" id="squirrel" value="squirrel"> squirrel </input><br>
+                </p>
+                <p>
+                    <input type=submit value=Submit>
+                </p>
+            </form>
+            </td>
+            </tr>
+            </table>
+            {% endif %}
+            {% if not show_eval %}
+            <p>
+                All images have been reviewed!
+            </p>
+            {% endif %}
+        </div>      
+    </header>
+    </section>
+
+</main>
+</div>
+
+{% endblock %}

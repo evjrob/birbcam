@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+{% set active_page = "index" %}
+{% include "header.html" %}
+
+
+<div>
+<main>    
+  <section>
+    <header>   
+      <div class="container">
+        <div class="row">
+          <h3>Things</h3>
+        </div>
+        {% for thing in things %}
+        <div class="row">
+          <h4>{{thing}}</h4>
+        </div>
+        {% endfor %}
+      </div>     
+    </header>
+  </section>
+
+</main>
+</div>
+
+{% endblock %}
