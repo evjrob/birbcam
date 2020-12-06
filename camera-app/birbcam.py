@@ -32,14 +32,17 @@ utc_tz = pytz.timezone('UTC')
 dt_fmt = '%Y-%m-%dT%H:%M:%S'
 
 # Where to save captured frames with changes
-save_dir = 'imgs/'
+save_dir = '../imgs/'
 
 # Create the Videoapture object for the webcam
 capture = cv.VideoCapture()
 capture.set(cv.CAP_PROP_FPS, 1)
 
-# Database
-conn = sqlite3.connect('data/model_results.db', timeout=15)
+# Database path
+db_path = '../data/model_results.db'
+
+# Model artifact path
+model_path = '../models/birbcam_prod.pkl'
     
 # Create the astral city location object
 city = LocationInfo("Calgary", "Canada", "America/Edmonton", 51.049999, -114.066666) 
@@ -123,8 +126,8 @@ def main_loop(queue):
 
 
             
-def image_processor(queue):
-    learn = load_learner('models/birbcam_prod.pkl')
+def image_processor(queue, db_path=db_path, save_dir=save_dir, model_path=model_path,):
+    learn = load_learner(model_path)
     x = None
     while True:
         try:
@@ -143,9 +146,11 @@ def image_processor(queue):
             filepath = f'{save_dir}{timestamp}_{label}.jpg'
             cv.imwrite(filepath, frame)
             # Write results to sqlite3 database
+            conn = sqlite3.connect(db_path, timeout=60)
             with conn:
                 conn.execute("INSERT INTO results VALUES (?,?,?,?,?,?)", 
                     (utc_timestamp, timestamp, filename, label, confidence, None))
+            conn.close()
             logging.info(f'Processed image with timestamp {timestamp} and found label {label}')
         except Exception as e:
             logging.error(traceback.format_exc())
