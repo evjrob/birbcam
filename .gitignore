@@ -1,14 +1,22 @@
 # Python script logs
-log.txt
+camera-app/log.txt
+
+# pycache
+camera-app/__pycache__/*
+camera-app/tests/__pycache__/*
+webapp/birbcam-app/__pycache__/*
 
 # Saved images
 imgs/*
+camera-app/tests/test_temp/*
+webapp/birbcam-app/static/imgs
 
 # Model artifacts
 models/*
 
 # Jupyter notebook checkpoints
-.ipynb_checkpoints/*
+notebooks/.ipynb_checkpoints/*
 
 # Data
 data/*
+camera-app/tests/test_assets/*
