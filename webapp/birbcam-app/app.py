@@ -3,7 +3,7 @@ import cv2 as cv
 import numpy as np
 import sqlite3
 
-from flask import Flask, redirect, render_template, request
+from flask import Flask, redirect, render_template, request, jsonify
 
 # Image directory
 img_dir = '../../imgs/'
@@ -90,13 +90,34 @@ def model_evaluation_api():
 # Route for model evaluation page
 @app.route('/api/data', methods=['POST'])
 def get_data():
-    start_date = str(request.form['start_date'])
-    end_date = str(request.form['end_date'])
+    labels = ['chickadee', 'magpie', 'sparrow', 'squirrel']
+    json_data = request.get_json(force=True)
+    start_date = json_data['start_date']
+    end_date = json_data['end_date']
     print(f'start date: {start_date}, end_date: {end_date}')
-    # Update the row in the database with the selected true label
-    # conn = sqlite3.connect('../data/model_results.db', timeout=15)
-    # c = conn.cursor()
-    # c.execute("UPDATE results SET true_label=? WHERE utc_datetime=?;", (label, utc_key))
-    # conn.commit()
-    # conn.close()
-    return redirect("/")
+    # Fetch the selected data range from the database
+    conn = sqlite3.connect('../../data/model_results.db', timeout=15)
+    c = conn.cursor()
+    c.execute('''SELECT datetime, file_name, prediction, confidence, true_label 
+                 FROM results 
+                 WHERE datetime>=? 
+                 AND datetime<=? 
+                 AND (NOT true_label='none'
+                 OR (true_label IS NULL AND NOT prediction='none'));''', 
+                 (start_date, end_date))
+    rows = c.fetchall()
+    conn.close()
+    result_dict = {l:[] for l in labels}
+    for event in rows:
+        dt, fn, pred, conf, true_label = event
+        print(event)
+        if true_label is not None:
+            item = {'date':dt, 'image':fn, 'confidence':1.0, 'reviewed':True}
+            result_dict[true_label].append(item)
+        else:
+            item = {'date':dt, 'image':fn, 'confidence': conf, 'reviewed':False}
+            result_dict[pred].append(item)
+    results = []
+    for k, v in result_dict.items():
+        results.append({'label': k, 'visits':v})
+    return jsonify(results)
