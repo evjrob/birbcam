@@ -99,6 +99,13 @@
             .style('pointer-events', 'auto')
             
         var chart = eventDrops({
+            line: {
+                color: (line, index) => {
+                    colors = ['#FF7F00', '#3166B6', '#E2000B', '#00B028'];
+                    color_index = (index % colors.length);
+                    return colors[color_index]
+                }
+            },
             zoom: {
                 onZoomEnd: () => updateVisitsInformation(chart),
             },
