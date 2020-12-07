@@ -1,24 +1,47 @@
 import base64
 import cv2 as cv
+import io
+import json
 import numpy as np
+from PIL import Image
 import sqlite3
 
-from flask import Flask, redirect, render_template, request, jsonify
+from flask import Flask, redirect, render_template, request, jsonify, send_file
 
 # Image directory
 img_dir = '../../imgs/'
 
 # Create flask app
 app = Flask(__name__)
+app.jinja_env.auto_reload = True
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+
+def histogram_equalize(img):
+    img_y_cr_cb = cv.cvtColor(img, cv.COLOR_BGR2YCrCb)
+    y, cr, cb = cv.split(img_y_cr_cb)
+    # Applying equalize Hist operation on Y channel.
+    y_eq = cv.equalizeHist(y)
+    img_y_cr_cb_eq = cv.merge((y_eq, cr, cb))
+    equ = cv.cvtColor(img_y_cr_cb_eq, cv.COLOR_YCR_CB2RGB)
+    return equ
+
+def brighten_image(img, minimum_brightness=0.66):
+    gray_img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    cols, rows = gray_img.shape
+    brightness = np.sum(gray_img) / (255 * cols * rows)
+    ratio = brightness / minimum_brightness
+    if ratio < 1:
+        bright = cv.convertScaleAbs(img, alpha = 1 / ratio, beta = 0)
+    else:
+        bright = img
+    bright = cv.cvtColor(bright, cv.COLOR_BGR2RGB)
+    return bright
 
 # Route for main visualization page
 @app.route('/')
 def main_visualization_page():
-    start_date = '2020-11-25'
-    end_date = '2020-12-31'
-    things = ['1', '2', '3']
-
-    return render_template('visualization.html', things=things)
+    return render_template('index.html')
 
 # Route for model evaluation page
 @app.route('/eval')
@@ -50,15 +73,9 @@ def model_evaluation_page():
         if img is None:
             print(utc_key)
             print(img_fn)
-        img_y_cr_cb = cv.cvtColor(img, cv.COLOR_BGR2YCrCb)
-        y, cr, cb = cv.split(img_y_cr_cb)
-
-        # Applying equalize Hist operation on Y channel.
-        y_eq = cv.equalizeHist(y)
-
-        img_y_cr_cb_eq = cv.merge((y_eq, cr, cb))
-        equ = cv.cvtColor(img_y_cr_cb_eq, cv.COLOR_YCR_CB2BGR)
-        res = np.hstack((img,equ)) #stacking images side-by-side
+        
+        adj = brighten_image(img)
+        res = np.hstack((img,adj)) #stacking images side-by-side
 
         # img io
         is_success, im_buf_arr = cv.imencode(".jpg", res)
@@ -110,7 +127,6 @@ def get_data():
     result_dict = {l:[] for l in labels}
     for event in rows:
         dt, fn, pred, conf, true_label = event
-        print(event)
         if true_label is not None:
             item = {'date':dt, 'image':fn, 'confidence':1.0, 'reviewed':True}
             result_dict[true_label].append(item)
@@ -119,5 +135,20 @@ def get_data():
             result_dict[pred].append(item)
     results = []
     for k, v in result_dict.items():
-        results.append({'label': k, 'visits':v})
+        results.append({'name': k, 'data':v})
     return jsonify(results)
+
+
+@app.route('/api/serve_image/<string:img_fn>')
+def serve_image(img_fn):
+    img = cv.imread(f'../../imgs/{img_fn}')
+    img = brighten_image(img)
+    #img = histogram_equalize(img)
+    img = Image.fromarray(img.astype('uint8'))
+    # create file-object in memory
+    file_object = io.BytesIO()
+    # write PNG in file-object
+    img.save(file_object, 'PNG')
+    # move to beginning of file so `send_file()` it will read from start    
+    file_object.seek(0)
+    return send_file(file_object, mimetype='image/PNG')

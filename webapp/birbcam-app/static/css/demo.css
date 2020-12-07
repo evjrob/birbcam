@@ -1,43 +1,36 @@
-.top-padded {
-    padding-top: 20px;
+* {
+    margin: 0;
+    padding: 0;
 }
 
-.left-padded {
-    padding-left: 20px;
+body {
+    font-size: 16px;
+    color: #222;
+    background: #eee;
+    padding: 0 3rem 1rem 3rem;
+    font-family: 'Muli', 'sans serif';
+}
+
+a {
+    color: #ff6e00;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+h1 {
+    text-align: center;
+    margin: 1.5rem auto 1rem;
+    font-family: 'Josefin Sans', Serif;
+    font-weight: normal;
+    font-size: 3rem;
+    color: #aaa;
 }
 
 p {
-    font-size: 20px;
-    padding-left: 10px;
-    padding-right: 10px;
-}
-
-/* Add a black background color to the top navigation */
-.topnav {
-    background-color: #DDD;
-    overflow: hidden;
-}
-  
-/* Style the links inside the navigation bar */
-.topnav a {
-    float: left;
-    color: #292929;
-    text-align: center;
-    padding: 14px 16px;
-    text-decoration: none;
-    font-size: 17px;
-}
-  
-/* Change the color of links on hover */
-.topnav a:hover {
-    background-color: #CCC;
-    color: black;
-}
-  
-/* Add a color to the active/current link */
-.topnav a.active {
-    background-color: #428bca;
-    color: white;
+    line-height: 1.5;
 }
 
 .infos {
@@ -70,7 +63,7 @@ p {
 footer p {
     text-align: center;
     color: #888;
-    font-size: 1.25rem;
+    font-size: .8rem;
 }
 
 .tooltip {
@@ -79,8 +72,7 @@ footer p {
     border: 3px solid #e7e7e7;
     border-radius: 1rem;
     padding: .5rem 1rem;
-    height: 64rem;
-    width: 48rem;
+    width: 30rem;
     line-height: 1.4rem;
 }
 
@@ -106,7 +98,7 @@ footer p {
     right: 1.65rem;
 }
 
-.tooltip .visit {
+.tooltip .commit {
     position: relative;
     z-index: 2;
     display: flex;
@@ -115,8 +107,8 @@ footer p {
 }
 
 .tooltip .avatar {
-    width: 48rem;
-    height: 64rem;
+    width: 5rem;
+    height: 5rem;
     border-radius: .5rem;
     margin-right: 1rem;
     flex: 0 0 5rem;
@@ -127,7 +119,7 @@ footer p {
 }
 
 .tooltip h3 {
-    font-size: 2rem;
+    font-size: 1rem;
 }
 
 .tooltip p {

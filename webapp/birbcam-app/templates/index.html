@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block content %}
+{% set active_page = "index" %}
+{% include "header.html" %}
+
+<div class="container">
+    <link href="https://fonts.googleapis.com/css?family=Josefin+Sans:300" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Muli" rel="stylesheet">
+    <link href="https://unpkg.com/event-drops/dist/style.css" rel="stylesheet" />
+    <h3>Birbcam Visitors</h3>
+    <div id="events" style="width: 90%;"></div>
+    <p class="infos">
+        <span id="numberVisits"></span> visits <span class="light">found between</span> <br />
+        <span id="zoomStart"></span> <span class="light">and</span> <span id="zoomEnd"></span>
+    </p>
+    <footer>
+        <p>
+            No birbs or other critters were harmed in the making of Birb Cam.
+        </p>
+    </footer>
+    <script src="https://unpkg.com/d3@4.13.0/build/d3.min.js"></script>
+    <script src="https://unpkg.com/d3-fetch"></script>
+    <script src="https://unpkg.com/event-drops/dist/index.js"></script>
+    <script >
+        var global = global || window;
+
+        var start_date = '2020-11-30T00:00:00';
+        var end_date = '2020-12-31T00:00:00';
+        
+        const numberVisitsContainer = document.getElementById('numberVisits');
+        const zoomStart = document.getElementById('zoomStart');
+        const zoomEnd = document.getElementById('zoomEnd');
+
+        const cleanDate = (date) => {
+            const monthNames = [
+                'Jan.',
+                'Feb.',
+                'March',
+                'Apr.',
+                'May',
+                'June',
+                'Jul.',
+                'Aug.',
+                'Sept.',
+                'Oct.',
+                'Nov.',
+                'Dec.',
+            ];
+            
+            function appendLeadingZeroes(n){
+                if(n <= 9){
+                    return "0" + n;
+                }
+                return n
+            }
+
+            return `
+                ${monthNames[date.getMonth()]} ${date.getDate()} ${date.getFullYear()}
+                ${appendLeadingZeroes(date.getHours())}:${appendLeadingZeroes(date.getMinutes())}:${appendLeadingZeroes(date.getSeconds())}
+            `;
+            
+        };
+
+        const updateVisitsInformation = chart => {
+            const filteredData = chart
+                .filteredData()
+                .reduce((total, repo) => total.concat(repo.data), []);
+
+            numberVisitsContainer.textContent = filteredData.length;
+            zoomStart.textContent = cleanDate(chart.scale().domain()[0]);
+            zoomEnd.textContent = cleanDate(chart.scale().domain()[1]);
+        };
+
+        const tooltip = d3
+            .select('body')
+            .append('div')
+            .classed('tooltip', true)
+            .style('opacity', 0)
+            .style('pointer-events', 'auto')
+            
+        var chart = eventDrops({
+            zoom: {
+                onZoomEnd: () => updateVisitsInformation(chart),
+            },
+            range: {
+                start: new Date(start_date),
+                end: new Date(end_date)
+            },
+            drop: {
+                date: d => new Date(d.date),
+                onMouseOver: visit => {
+                    tooltip
+                        .transition()
+                        .duration(200)
+                        .style('opacity', 1)
+                        .style('pointer-events', 'auto');
+
+                    tooltip
+                        .html(
+                            `
+                            <div>
+                                <h3>${visit.date}</h3>
+                            </div>
+                            <div class="visit">
+                                <img class="avatar" src="/api/serve_image/${visit.image}" />
+                            </div>
+                        `
+                        )
+                        .style('left', `${d3.event.pageX - 30}px`)
+                        .style('top', `${d3.event.pageY + 20}px`);
+                },
+                onMouseOut: () => {
+                    tooltip
+                        .transition()
+                        .duration(500)
+                        .style('opacity', 0)
+                        .style('pointer-events', 'none');
+                },
+            },
+        });
+        
+        d3.json('http://192.168.0.24:5000/api/data', {
+            method:"post",
+            body: JSON.stringify({
+                start_date: start_date,
+                end_date: end_date
+            })
+        })
+        .then(function(json) {
+            var birbsData = json;
+            d3.select('#events').data([birbsData]).call(chart);
+            updateVisitsInformation(chart);
+        });
+
+    </script>
+</div>
+
+{% endblock %}
