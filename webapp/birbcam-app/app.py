@@ -75,6 +75,7 @@ def model_evaluation_page():
             print(img_fn)
         
         adj = brighten_image(img)
+        adj = cv.cvtColor(adj, cv.COLOR_RGB2BGR)
         res = np.hstack((img,adj)) #stacking images side-by-side
 
         # img io
