@@ -24,12 +24,20 @@
     <script >
         var global = global || window;
 
-        var start_date = '2020-11-30T00:00:00';
-        var end_date = '2020-12-31T00:00:00';
+        var end_date = new Date();
+        var start_date = new Date('2020-11-30');
+        //console.log(start_date);
+        //console.log(end_date);
         
         const numberVisitsContainer = document.getElementById('numberVisits');
         const zoomStart = document.getElementById('zoomStart');
-        const zoomEnd = document.getElementById('zoomEnd');
+
+        const appendLeadingZeroes = (n) => {
+            if(n <= 9){
+                return "0" + n;
+            }
+            return n
+        };
 
         const cleanDate = (date) => {
             const monthNames = [
@@ -46,19 +54,31 @@
                 'Nov.',
                 'Dec.',
             ];
-            
-            function appendLeadingZeroes(n){
-                if(n <= 9){
-                    return "0" + n;
-                }
-                return n
-            }
 
             return `
                 ${monthNames[date.getMonth()]} ${date.getDate()} ${date.getFullYear()}
                 ${appendLeadingZeroes(date.getHours())}:${appendLeadingZeroes(date.getMinutes())}:${appendLeadingZeroes(date.getSeconds())}
             `;
-            
+        };
+
+        const dbDate = (date) => {
+            db_date = `${date.getFullYear()}-${appendLeadingZeroes(date.getMonth() + 1)}-${appendLeadingZeroes(date.getDate())}T${appendLeadingZeroes(date.getHours())}:${appendLeadingZeroes(date.getMinutes())}:${appendLeadingZeroes(date.getSeconds())}`
+            return db_date;
+        };
+
+        var updateChartData = (start_date, end_date) => {
+            d3.json('http://192.168.0.24:5000/api/data', {
+                method:"post",
+                body: JSON.stringify({
+                    start_date: dbDate(start_date),
+                    end_date: dbDate(end_date)
+                })
+            })
+            .then(function(json) {
+                var birbsData = json;
+                d3.select('#events').data([birbsData]).call(chart);
+                updateVisitsInformation(chart);
+            });
         };
 
         const updateVisitsInformation = chart => {
@@ -83,8 +103,8 @@
                 onZoomEnd: () => updateVisitsInformation(chart),
             },
             range: {
-                start: new Date(start_date),
-                end: new Date(end_date)
+                start: start_date,
+                end: end_date
             },
             drop: {
                 date: d => new Date(d.date),
@@ -118,20 +138,8 @@
                 },
             },
         });
-        
-        d3.json('http://192.168.0.24:5000/api/data', {
-            method:"post",
-            body: JSON.stringify({
-                start_date: start_date,
-                end_date: end_date
-            })
-        })
-        .then(function(json) {
-            var birbsData = json;
-            d3.select('#events').data([birbsData]).call(chart);
-            updateVisitsInformation(chart);
-        });
-
+    
+        updateChartData(start_date, end_date);
     </script>
 </div>
 
