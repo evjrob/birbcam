@@ -24,7 +24,13 @@
     <script >
         var global = global || window;
 
-        var end_date = new Date();
+        function addDays(date, days) {
+            const copy = new Date(Number(date))
+            copy.setDate(date.getDate() + days)
+            return copy
+        };
+
+        var end_date = addDays(new Date(), 1);
         var start_date = new Date('2020-11-30');
         //console.log(start_date);
         //console.log(end_date);
