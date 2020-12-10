@@ -73,7 +73,7 @@
         };
 
         var updateChartData = (start_date, end_date) => {
-            d3.json('http://192.168.0.24:5000/api/data', {
+            d3.json('/api/data', {
                 method:"post",
                 body: JSON.stringify({
                     start_date: dbDate(start_date),
