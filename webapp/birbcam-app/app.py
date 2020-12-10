@@ -26,7 +26,7 @@ def histogram_equalize(img):
     equ = cv.cvtColor(img_y_cr_cb_eq, cv.COLOR_YCR_CB2RGB)
     return equ
 
-def brighten_image(img, minimum_brightness=0.66):
+def brighten_image(img, minimum_brightness=0.4):
     gray_img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     cols, rows = gray_img.shape
     brightness = np.sum(gray_img) / (255 * cols * rows)
