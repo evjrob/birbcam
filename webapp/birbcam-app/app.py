@@ -49,6 +49,8 @@ def model_evaluation_page():
     confidence = request.args.get('confidence', default=None)
     if confidence is None:
         confidence = 1.0
+    else:
+        confidence = float(confidence)
     prediction = request.args.get('prediction', default=None)
     if prediction is None:
         prediction = '%'
@@ -104,7 +106,8 @@ def model_evaluation_page():
         img_b64 = None
         label = None
         utc_key = None
-    return render_template('evaluate.html', progress=progress, show_eval=show_eval, filename=img_fn, 
+    return render_template('evaluate.html', prediction=prediction, confidence=confidence, 
+                           progress=progress, show_eval=show_eval, filename=img_fn, 
                            img=img_b64, label=label, utc_key=utc_key)
 
 # Route for model evaluation page
@@ -119,7 +122,7 @@ def model_evaluation_api():
     c.execute("UPDATE results SET true_label=? WHERE utc_datetime=?;", (label, utc_key))
     conn.commit()
     conn.close()
-    return redirect("/eval")
+    return redirect(request.referrer)
 
 # Route for model evaluation page
 @app.route('/api/data', methods=['POST'])

@@ -9,6 +9,28 @@
     <header>
         <div class="container">
             <h3>Birb Cam Model Evaluation</h3>
+            <h4>Filters:</h4>
+            <form id="filter" action="http://192.168.0.24:5000/eval" method="GET">
+                <label for="prediction">Select a Prediction Label: {{prediction}}</label>
+                <br>
+                <select name="prediction" id="prediction">
+                  <option>none</option>
+                  <option>sparrow</option>
+                  <option>chickadee</option>
+                  <option>magpie</option>
+                  <option>squirrel</option>
+                </select>
+                <br><br>
+                <label for="confrange">Prediction Confidence: {{confidence}}</label>
+                <input id="slider" name="confidence" data-slider-id='filtSlider' type="range"
+                    min="0" max="1" step="0.01" 
+                    value="{{confidence}}"/>
+                <input type="submit" class="submit" value="Submit"/>
+                <br>
+              </form>
+            <div >
+            <br>    
+            </div>
             <div class="progress">
                 <div class="progress-bar" role="progressbar" style="width: {{progress}};" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">{{progress}} Complete</div>
             </div>
@@ -53,6 +75,25 @@
         </div>      
     </header>
     </section>
+    <script>
+        $( function() {
+            $( "#prediction" ).selectmenu({
+                change: function(event, ui) {
+                    $(".form input[name='Value']").val( ui.value );
+            }
+            });
+        });
+        $( function() {
+            $("#slider").slider({
+                min: 0.0,
+                max: 1.0,
+                step:0.01,
+                change: function(event, ui) {
+                    $(".form input[name='Value']").val( ui.value );
+                }
+            });
+        });
+    </script>
 
 </main>
 </div>
