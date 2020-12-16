@@ -17,13 +17,13 @@
             <tr>
             <td>
             <p>
-                {{filename}} Original/ Equalized Images:
+                {{filename}}:
             </p>   
-            <img src="{{img}}" width='800'>
+            <img src="{{img}}" width='400'>
             </td>
             <td class='left-padded'>
             <p>
-                Model selected a label of: {{label}}
+                Model selected a label of: <strong>{{label}}</strong>
             </p>
             <form name="model_eval" action="./api/model_eval_submit" method="POST" onsubmit="">
                 <input type='hidden' name='utc_key' id='utc_key' value={{utc_key}}>

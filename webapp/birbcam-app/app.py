@@ -44,20 +44,37 @@ def main_visualization_page():
     return render_template('index.html')
 
 # Route for model evaluation page
-@app.route('/eval')
+@app.route('/eval', methods=['GET'])
 def model_evaluation_page():
+    confidence = request.args.get('confidence', default=None)
+    if confidence is None:
+        confidence = 1.0
+    prediction = request.args.get('prediction', default=None)
+    if prediction is None:
+        prediction = '%'
+    print(prediction)
     # Fetch a single un-reviewed image from the database
     conn = sqlite3.connect('../../data/model_results.db', timeout=15)
     query = '''SELECT utc_datetime, file_name, prediction 
                FROM results 
-               WHERE true_label IS NULL 
+               WHERE true_label IS NULL
+               AND prediction LIKE ?
+               AND confidence <= ?
                ORDER BY utc_datetime
                LIMIT 1;'''
     c = conn.cursor()
-    c.execute(query)
+    c.execute(query, (prediction, confidence))
     row = c.fetchone()
-    c.execute('''SELECT AVG(CASE WHEN true_label IS NULL THEN 0 ELSE 1 END) FROM results;''')
-    progress = c.fetchone()[0] * 100
+    query = '''SELECT AVG(CASE WHEN true_label IS NULL THEN 0 ELSE 1 END) 
+               FROM results
+               WHERE prediction LIKE ?
+               AND confidence <= ?;'''
+    c.execute(query, (prediction, confidence))
+    progress = c.fetchone()[0]
+    if progress is None:
+        progress = 100
+    else:
+        progress = progress * 100
     precision = '.2f'
     progress = f'{progress:{precision}}%'
     conn.close()
@@ -76,10 +93,9 @@ def model_evaluation_page():
         
         adj = brighten_image(img)
         adj = cv.cvtColor(adj, cv.COLOR_RGB2BGR)
-        res = np.hstack((img,adj)) #stacking images side-by-side
 
         # img io
-        is_success, im_buf_arr = cv.imencode(".jpg", res)
+        is_success, im_buf_arr = cv.imencode(".jpg", adj)
         png_img_bytes = im_buf_arr.tobytes()
         img_b64 = 'data:image/png;base64,' + base64.b64encode(png_img_bytes).decode('utf8')
     else:
