@@ -45,7 +45,7 @@
             </td>
             <td class='left-padded'>
             <p>
-                Model selected a label of: <strong>{{label}}</strong>
+                Model selected a label of <strong>{{label}}</strong> with confidence <strong>{{label_conf}}</strong>
             </p>
             <form name="model_eval" action="./api/model_eval_submit" method="POST" onsubmit="">
                 <input type='hidden' name='utc_key' id='utc_key' value={{utc_key}}>
@@ -75,25 +75,6 @@
         </div>      
     </header>
     </section>
-    <script>
-        $( function() {
-            $( "#prediction" ).selectmenu({
-                change: function(event, ui) {
-                    $(".form input[name='Value']").val( ui.value );
-            }
-            });
-        });
-        $( function() {
-            $("#slider").slider({
-                min: 0.0,
-                max: 1.0,
-                step:0.01,
-                change: function(event, ui) {
-                    $(".form input[name='Value']").val( ui.value );
-                }
-            });
-        });
-    </script>
 
 </main>
 </div>

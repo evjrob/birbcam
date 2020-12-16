@@ -57,7 +57,7 @@ def model_evaluation_page():
     print(prediction)
     # Fetch a single un-reviewed image from the database
     conn = sqlite3.connect('../../data/model_results.db', timeout=15)
-    query = '''SELECT utc_datetime, file_name, prediction 
+    query = '''SELECT utc_datetime, file_name, prediction, confidence
                FROM results 
                WHERE true_label IS NULL
                AND prediction LIKE ?
@@ -86,6 +86,8 @@ def model_evaluation_page():
         utc_key = row[0]
         img_fn = row[1]
         label = row[2]
+        label_conf = row[3]
+        label_conf = f'{label_conf:{precision}}'
 
         # Read the image and histogram nomalize it
         img = cv.imread(f'../../imgs/{img_fn}')
@@ -105,10 +107,11 @@ def model_evaluation_page():
         img_fn = None
         img_b64 = None
         label = None
+        label_conf = None
         utc_key = None
     return render_template('evaluate.html', prediction=prediction, confidence=confidence, 
                            progress=progress, show_eval=show_eval, filename=img_fn, 
-                           img=img_b64, label=label, utc_key=utc_key)
+                           img=img_b64, label=label, label_conf=label_conf, utc_key=utc_key)
 
 # Route for model evaluation page
 @app.route('/api/model_eval_submit', methods=['POST'])
