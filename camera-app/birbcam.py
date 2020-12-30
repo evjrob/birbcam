@@ -139,19 +139,23 @@ def image_processor(queue, db_path=db_path, save_dir=save_dir, model_path=model_
             rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
             # Get the predicted label and confidence
             pred = learn.predict(rgb_frame)
-            label = pred[0]
+            labels = pred[0]
+            if len(labels) == 0:
+                labels = ['none']
+            fname_label = '_'.join(labels)
+            pred_label = ','.join(labels)
             confidence = float(pred[2].numpy().max())
             # Save the image with time stamp and label
-            filename = f'{timestamp}_{label}.jpg'
-            filepath = f'{save_dir}{timestamp}_{label}.jpg'
+            filename = f'{timestamp}_{fname_label}.jpg'
+            filepath = f'{save_dir}{timestamp}_{fname_label}.jpg'
             cv.imwrite(filepath, frame)
             # Write results to sqlite3 database
             conn = sqlite3.connect(db_path, timeout=60)
             with conn:
                 conn.execute("INSERT INTO results VALUES (?,?,?,?,?,?)", 
-                    (utc_timestamp, timestamp, filename, label, confidence, None))
+                    (utc_timestamp, timestamp, filename, pred_label, confidence, None))
             conn.close()
-            logging.info(f'Processed image with timestamp {timestamp} and found label {label}')
+            logging.info(f'Processed image with timestamp {timestamp} and found label(s) {pred_label}')
         except Exception as e:
             logging.error(traceback.format_exc())
             pass

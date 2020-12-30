@@ -157,8 +157,10 @@ def get_data():
     for event in rows:
         dt, fn, pred, conf, true_label = event
         if true_label is not None:
-            item = {'date':dt, 'image':fn, 'confidence':1.0, 'reviewed':True}
-            result_dict[true_label].append(item)
+            true_labels = true_label.split(',')
+            for tl in true_labels:
+                item = {'date':dt, 'image':fn, 'confidence':1.0, 'reviewed':True}
+                result_dict[tl].append(item)
         else:
             item = {'date':dt, 'image':fn, 'confidence': conf, 'reviewed':False}
             result_dict[pred].append(item)
