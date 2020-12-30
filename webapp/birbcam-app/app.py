@@ -117,12 +117,18 @@ def model_evaluation_page():
 @app.route('/api/model_eval_submit', methods=['POST'])
 def model_evaluation_api():
     utc_key = str(request.form['utc_key'])
-    label = str(request.form['label'])
-    print(f'key: {utc_key}, label: {label}')
+    labels = request.form.getlist('label')
+    if len(labels) == 0:
+        labels = ['none']
+    if 'other' in labels:
+        other_label = str(request.form['othertext'])
+        labels[labels.index('other')] = other_label
+    label_str = ','.join(labels)
+    print(f'key: {utc_key}, label: {label_str}')
     # Update the row in the database with the selected true label
     conn = sqlite3.connect('../../data/model_results.db', timeout=15)
     c = conn.cursor()
-    c.execute("UPDATE results SET true_label=? WHERE utc_datetime=?;", (label, utc_key))
+    c.execute("UPDATE results SET true_label=? WHERE utc_datetime=?;", (label_str, utc_key))
     conn.commit()
     conn.close()
     return redirect(request.referrer)
