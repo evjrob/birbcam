@@ -5,6 +5,7 @@ camera-app/log.txt
 camera-app/__pycache__/*
 camera-app/tests/__pycache__/*
 webapp/birbcam-app/__pycache__/*
+notebooks/__pycache__/*
 
 # Saved images
 imgs/*
