@@ -1,0 +1,9 @@
+# Function dependencies, for example:
+# package>=version
+
+google-cloud-storage
+fastai==2.1.6
+
+# Torch
+https://download.pytorch.org/whl/nightly/cpu/torch-1.8.0.dev20201210%2Bcpu-cp38-cp38-linux_x86_64.whl
+https://download.pytorch.org/whl/nightly/cpu/torchvision-0.9.0.dev20201210%2Bcpu-cp38-cp38-linux_x86_64.whl

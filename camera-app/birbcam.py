@@ -1,14 +1,18 @@
 from astral import LocationInfo
 from astral.sun import sun
+import base64
 import cv2 as cv
 import datetime as dt
 from fastai.vision.all import *
+from io import BytesIO
 import logging
 import multiprocessing as mp
 import numpy as np
 from PIL import Image
 import pytz
+import requests
 from scipy.signal import medfilt2d
+from secrets import ENDPOINT
 import sqlite3
 import time
 import traceback
@@ -127,7 +131,7 @@ def main_loop(queue):
 
             
 def image_processor(queue, db_path=db_path, save_dir=save_dir, model_path=model_path):
-    learn = load_learner(model_path)
+    # learn = load_learner(model_path)
     x = None
     while True:
         try:
@@ -137,14 +141,23 @@ def image_processor(queue, db_path=db_path, save_dir=save_dir, model_path=model_
             logging.debug(f'Processing image with timestamp {timestamp}')
             # Convert the OpenCV image from BGR to RGB for fastai
             rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+
             # Get the predicted label and confidence
-            pred = learn.predict(rgb_frame)
-            labels = pred[0]
+            pil_img = Image.fromarray(rgb_frame)
+            buf = BytesIO()
+            pil_img.save(buf, format="JPEG")
+            b64_img = base64.b64encode(buf.getvalue()).decode("utf-8")
+            r = requests.post(ENDPOINT, json={"b64_img":b64_img})
+            results = r.json()
+            labels = results['labels']
+            confidences = [c[1] for c in results['confidence']]
             if len(labels) == 0:
                 labels = ['none']
+                confidence = 1 - max(confidences)
+            else:
+                confidence = min([c for c in confidences if c > 0.5])
             fname_label = '_'.join(labels)
             pred_label = ','.join(labels)
-            confidence = float(pred[2].numpy().max())
             # Save the image with time stamp and label
             filename = f'{timestamp}_{fname_label}.jpg'
             filepath = f'{save_dir}{timestamp}_{fname_label}.jpg'
