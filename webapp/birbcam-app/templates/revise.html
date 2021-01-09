@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+{% set active_page = "revise" %}
+{% include "header.html" %}
+
+<div>
+<main>    
+    <section>
+    <header>
+        <div class="container">
+            <h3>Birb Cam Label Revision</h3>
+            <form id="select" action="http://192.168.0.24:5000/revise" method="GET">
+                    Image date time:
+                    <input type="text" name="dt_key" id="dt_key"/><br>
+                </p>
+                <p>
+                    <input type=submit value=Submit>
+                </p>
+            </form>
+            <div >
+            <br>    
+            </div>
+            <table>
+            <tr>
+            <td>
+            <p>
+                {{filename}}:
+            </p>   
+            <img src="{{img}}" width='400'>
+            </td>
+            <td class='left-padded'>
+            <p>
+                Existing label is <strong>{{label}}</strong>
+            </p>
+            <form name="model_eval" action="./api/model_eval_submit" method="POST" onsubmit="">
+                <input type='hidden' name='utc_key' id='utc_key' value={{utc_key}}>
+                <p>
+                    Please select the correct label:
+                </p>
+                <p>
+                    <input type="checkbox" name="label" id="sparrow" value="sparrow"> sparrow </input><br>
+                    <input type="checkbox" name="label" id="chickadee" value="chickadee"> chickadee </input><br>
+                    <input type="checkbox" name="label" id="magpie" value="magpie"> magpie </input><br>
+                    <input type="checkbox" name="label" id="squirrel" value="squirrel"> squirrel </input><br>
+                    <input type="checkbox" name="label" id="other" value="other"> other: </input>
+                    <input type="text" name="othertext" id="othertext"/><br>
+                </p>
+                <p>
+                    <input type=submit value=Submit>
+                </p>
+            </form>
+            </td>
+            </tr>
+            </table>
+        </div>      
+    </header>
+    </section>
+
+</main>
+</div>
+
+{% endblock %}

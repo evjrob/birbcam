@@ -113,6 +113,57 @@ def model_evaluation_page():
                            progress=progress, show_eval=show_eval, filename=img_fn, 
                            img=img_b64, label=label, label_conf=label_conf, utc_key=utc_key)
 
+# Route for data revision page
+@app.route('/revise', methods=['GET'])
+def label_revise_page():
+    conn = sqlite3.connect('../../data/model_results.db', timeout=15)
+    c = conn.cursor()
+    dt_key = request.args.get('dt_key', default=None)
+    if dt_key is None:
+        query = '''SELECT datetime
+               FROM results 
+               WHERE true_label IS NOT NULL
+               ORDER BY utc_datetime
+               LIMIT 1;'''
+        c.execute(query)
+        dt_key = c.fetchone()[0]
+    
+    # Fetch a single un-reviewed image from the database
+    query = '''SELECT utc_datetime, file_name, true_label
+               FROM results 
+               WHERE datetime = ?
+               ORDER BY utc_datetime
+               LIMIT 1;'''
+    c.execute(query, (dt_key,))
+    row = c.fetchone()
+    conn.close()
+
+    if row is not None:
+        utc_key = row[0]
+        img_fn = row[1]
+        label = row[2]
+
+        # Read the image and histogram nomalize it
+        img = cv.imread(f'../../imgs/{img_fn}')
+        if img is None:
+            print(utc_key)
+            print(img_fn)
+        
+        adj = brighten_image(img)
+        adj = cv.cvtColor(adj, cv.COLOR_RGB2BGR)
+
+        # img io
+        is_success, im_buf_arr = cv.imencode(".jpg", adj)
+        png_img_bytes = im_buf_arr.tobytes()
+        img_b64 = 'data:image/png;base64,' + base64.b64encode(png_img_bytes).decode('utf8')
+    else:
+        img_fn = None
+        img_b64 = None
+        label = None
+        utc_key = None
+    return render_template('revise.html', filename=img_fn, img=img_b64, 
+                           label=label, utc_key=utc_key)
+
 # Route for model evaluation page
 @app.route('/api/model_eval_submit', methods=['POST'])
 def model_evaluation_api():
