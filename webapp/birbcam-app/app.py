@@ -123,7 +123,7 @@ def label_revise_page():
         query = '''SELECT datetime
                FROM results 
                WHERE true_label IS NOT NULL
-               ORDER BY utc_datetime
+               ORDER BY utc_datetime DESC
                LIMIT 1;'''
         c.execute(query)
         dt_key = c.fetchone()[0]
