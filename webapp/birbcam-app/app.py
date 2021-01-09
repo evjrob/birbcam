@@ -133,7 +133,7 @@ def model_evaluation_api():
     conn.close()
     return redirect(request.referrer)
 
-# Route for model evaluation page
+# Route for data loading API
 @app.route('/api/data', methods=['POST'])
 def get_data():
     labels = ['chickadee', 'magpie', 'sparrow', 'squirrel']
