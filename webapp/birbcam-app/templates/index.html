@@ -13,6 +13,7 @@
         <span id="numberVisits"></span> visits <span class="light">found between</span> <br />
         <span id="zoomStart"></span> <span class="light">and</span> <span id="zoomEnd"></span>
     </p>
+    <div class="selected" id="selected_image"></div>
     <footer>
         <p>
             No birbs or other critters were harmed in the making of Birb Cam.
@@ -103,6 +104,16 @@
             .classed('tooltip', true)
             .style('opacity', 0)
             .style('pointer-events', 'auto')
+        
+        const selected = d3
+            .select('#selected_image')
+
+        const closeSelected = () => {
+            selected
+                .html('')
+                .classed("inactive", true)
+                .classed("active", false);
+        };
             
         var chart = eventDrops({
             line: {
@@ -148,6 +159,24 @@
                         .duration(500)
                         .style('opacity', 0)
                         .style('pointer-events', 'none');
+                },
+                onClick: visit => {
+                    selected
+                        .html(
+                            `
+                            <button id = "x" onclick="closeSelected()">
+                                <strong>x</strong>
+                            </button>
+                            <div>
+                                <h3>${visit.date} - ${visit.true_label} [<a href="/revise?dt_key=${visit.date}">revise</a>]</h3>
+                            </div>
+                            <div class="visit">
+                                <img class="avatar" src="/api/serve_image/${visit.image}" />
+                            </div>
+                        `
+                        )
+                        .classed("inactive", false)
+                        .classed("active", true);
                 },
             },
         });

@@ -45,6 +45,35 @@ p {
     margin-bottom: 1rem;
 }
 
+.selected.inactive {
+    width: 46%;
+    margin: auto;
+}
+
+.selected.active {
+    width: 46%;
+    margin: auto;
+    border-width: 1px;
+    border-radius: 1rem;
+    border-color: gray;
+    border-style: solid;
+    padding-top: 1rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    padding-bottom: 1rem;
+}
+
+#x {
+    position: relative;
+    background: grey;
+    color: white;
+    right: -97%;
+    border-width: 1px;
+    border-radius: 0.5rem;
+    border-color: #555;
+    border-style: solid;
+} 
+
 #zoomStart, #zoomEnd {
     display: inline-block;
     font-feature-settings: "tnum";
@@ -68,6 +97,7 @@ p {
 }
 
 footer p {
+    padding-top: 1rem;
     text-align: center;
     color: #888;
     font-size: 1.25rem;
@@ -79,8 +109,8 @@ footer p {
     border: 3px solid #e7e7e7;
     border-radius: 1rem;
     padding: .5rem 1rem;
-    height: 71.25rem;
-    width: 50.5rem;
+    height: 39.25rem;
+    width: 26.5rem;
     line-height: 1.4rem;
 }
 
@@ -115,8 +145,8 @@ footer p {
 }
 
 .tooltip .avatar {
-    width: 48rem;
-    height: 64rem;
+    width: 24rem;
+    height: 32rem;
     border-radius: .5rem;
     margin-right: 1rem;
     flex: 0 0 5rem;

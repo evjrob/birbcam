@@ -210,10 +210,10 @@ def get_data():
         if true_label is not None:
             true_labels = true_label.split(',')
             for tl in true_labels:
-                item = {'date':dt, 'image':fn, 'confidence':1.0, 'reviewed':True}
+                item = {'date':dt, 'image':fn, 'confidence':1.0, 'reviewed':True, 'true_label':true_label}
                 result_dict[tl].append(item)
         else:
-            item = {'date':dt, 'image':fn, 'confidence': conf, 'reviewed':False}
+            item = {'date':dt, 'image':fn, 'confidence': conf, 'reviewed':False, 'true_label':true_label}
             result_dict[pred].append(item)
     results = []
     for k, v in result_dict.items():
