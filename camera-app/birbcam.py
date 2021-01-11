@@ -102,28 +102,28 @@ def night_pause_loop(stop_time):
 def main_loop(queue):
     while True:
         try:
-            # Figure out when to run the webcam based on dawn and sunset today
+            # Figure out when to run the webcam based on dawn and dusk today
             current_time = dt.datetime.now(tz=tz)
             today_sun_times = sun(city.observer, date=dt.datetime.now(tz=tz), tzinfo=tz)
-            today_dawn = today_sun_times['dawn']
-            today_sunset = today_sun_times['sunset']
+            today_start = today_sun_times['dawn']
+            today_end = today_sun_times['dusk']
             
             # If current time is less than dawn today, then wait until then
-            if current_time < today_dawn:
-                logging.info(f'Delaying the cature of images until dawn at {today_dawn:{dt_fmt}}')
-                night_pause_loop(today_dawn)
+            if current_time < today_start:
+                logging.info(f'Delaying the cature of images until dawn at {today_start:{dt_fmt}}')
+                night_pause_loop(today_start)
             
             # We can capture images, start the camera loop until sunset today
-            elif current_time >= today_dawn and current_time <= today_sunset:
-                logging.info(f'Capturing images until sunset at {today_sunset:{dt_fmt}}')
-                camera_loop(queue, today_sunset)
+            elif current_time >= today_start and current_time <= today_end:
+                logging.info(f'Capturing images until dusk at {today_end:{dt_fmt}}')
+                camera_loop(queue, today_end)
             
             # Pause image capture until dawn tomorrow
-            elif current_time > today_sunset:
+            elif current_time > today_end:
                 tomorrow_sun_times = sun(city.observer, date=dt.datetime.now(tz=tz) + dt.timedelta(days=1), tzinfo=tz)
-                tomorrow_dawn = tomorrow_sun_times['dawn']
-                logging.info(f'Delaying the cature of images until dawn at {tomorrow_dawn:{dt_fmt}}')
-                night_pause_loop(tomorrow_dawn)
+                tomorrow_start = tomorrow_sun_times['dawn']
+                logging.info(f'Delaying the cature of images until dawn at {tomorrow_start:{dt_fmt}}')
+                night_pause_loop(tomorrow_start)
         except Exception as e:
             logging.error(traceback.format_exc())
             pass
