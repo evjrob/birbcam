@@ -51,8 +51,12 @@ p {
 }
 
 .selected.active {
-    width: 46%;
-    margin: auto;
+    position: absolute;
+    top: 10%;
+    left: 50%;
+    background: #FFF;
+    width: 52rem;
+    margin-left: -26rem;
     border-width: 1px;
     border-radius: 1rem;
     border-color: gray;
