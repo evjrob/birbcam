@@ -8,14 +8,36 @@
     <link href="https://fonts.googleapis.com/css?family=Muli" rel="stylesheet">
     <link href="https://unpkg.com/event-drops/dist/style.css" rel="stylesheet" />
     <h3>Birb Cam Visitors</h3>
-    <div id="events" style="width: 90%;"></div>
-    <p class="infos">
-        <span id="numberVisits"></span> visits <span class="light">found between</span> <br />
-        <span id="zoomStart"></span> <span class="light">and</span> <span id="zoomEnd"></span>
-    </p>
-    <div class="selected" id="selected_image"></div>
-    <footer>
-        <p>
+    <!-- Modal -->
+    <div class="modal fade" id="selected_modal" tabindex="-1" aria-labelledby="selectedLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="selected_label"></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="visit" id="selected_image">
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div id="events" class="col-10"></div>
+    </div>
+    <div class="row">
+        <p class="infos col-12">
+            <span id="numberVisits"></span> visits <span class="light">found between</span> <br />
+            <span id="zoomStart"></span> <span class="light">and</span> <span id="zoomEnd"></span>
+        </p>
+    </div> 
+    <footer class="row">
+        <p class="col-12">
             No birbs or other critters were harmed in the making of Birb Cam.
         </p>
     </footer>
@@ -101,19 +123,10 @@
         const tooltip = d3
             .select('body')
             .append('div')
-            .classed('tooltip', true)
+            .classed('tooltip col-4 col-lg-2 col-md-4 col-sm-6', true)
             .style('opacity', 0)
             .style('pointer-events', 'auto')
         
-        const selected = d3
-            .select('#selected_image')
-
-        const closeSelected = () => {
-            selected
-                .html('')
-                .classed("inactive", true)
-                .classed("active", false);
-        };
             
         var chart = eventDrops({
             line: {
@@ -143,10 +156,10 @@
                         .html(
                             `
                             <div>
-                                <h3>${visit.date}</h3>
+                                <h5>${visit.date}</h5>
                             </div>
                             <div class="visit">
-                                <img class="avatar" src="/api/serve_image/${visit.image}" />
+                                <img class="preview" src="/api/serve_image/${visit.image}" />
                             </div>
                         `
                         )
@@ -161,22 +174,13 @@
                         .style('pointer-events', 'none');
                 },
                 onClick: visit => {
-                    selected
-                        .html(
-                            `
-                            <button id = "x" onclick="closeSelected()">
-                                <strong>x</strong>
-                            </button>
-                            <div>
-                                <h3>${visit.date} - ${visit.true_label} [<a href="/revise?dt_key=${visit.date}">revise</a>]</h3>
-                            </div>
-                            <div class="visit">
-                                <img class="avatar" src="/api/serve_image/${visit.image}" />
-                            </div>
-                        `
-                        )
-                        .classed("inactive", false)
-                        .classed("active", true);
+                    $('#selected_modal').modal();
+                    d3.select('#selected_label').text(`${visit.date} - ${visit.true_label}`);
+                    d3.select('#selected_image')
+                        .html(`<img class="preview" src="/api/serve_image/${visit.image}" />`);
+                    d3.select('.modal-footer')
+                        .html(`<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                               <button type="button" class="btn btn-primary" onclick="window.location='/revise?dt_key=${visit.date}';">Revise</button>`);
                 },
             },
         });

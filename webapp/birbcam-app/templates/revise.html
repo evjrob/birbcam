@@ -20,15 +20,15 @@
             <div >
             <br>    
             </div>
-            <table>
-            <tr>
-            <td>
-            <p>
-                {{filename}}:
-            </p>   
-            <img src="{{img}}" width='400'>
-            </td>
-            <td class='left-padded'>
+            <div class="row">
+                <div class="top-padded col-lg-6 col-md-6 col-sm-10 col-10">
+                    <h5>
+                        {{filename}}:
+                    </h5>
+                    <img class="evaluate_img" src="{{img}}" width='400'>    
+                </div>
+                <div class="top-padded col-lg-6 col-md-6 col-sm-10 col-10">
+                <p><br></p>
             <p>
                 Existing label is <strong>{{label}}</strong>
             </p>

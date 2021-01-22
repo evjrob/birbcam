@@ -11,62 +11,74 @@
             <h3>Birb Cam Model Evaluation</h3>
             <h4>Filters:</h4>
             <form id="filter" action="http://192.168.0.24:5000/eval" method="GET">
-                <label for="prediction">Select a Prediction Label: {{prediction}}</label>
-                <br>
-                <select name="prediction" id="prediction">
-                  <option>none</option>
-                  <option>sparrow</option>
-                  <option>chickadee</option>
-                  <option>magpie</option>
-                  <option>squirrel</option>
-                </select>
-                <br><br>
-                <label for="confrange">Prediction Confidence: {{confidence}}</label>
-                <input id="slider" name="confidence" data-slider-id='filtSlider' type="range"
-                    min="0" max="1" step="0.01" 
-                    value="{{confidence}}"/>
-                <input type="submit" class="submit" value="Submit"/>
-                <br>
-              </form>
+                <div class="row">
+                    <div class=" col-lg-6 col-md-10 col-sm-10 col-10">
+                        <label for="prediction">Select a Prediction Label: {{prediction}}</label>
+                        <br>
+                        <select name="prediction" id="prediction">
+                        <option>none</option>
+                        <option>sparrow</option>
+                        <option>chickadee</option>
+                        <option>magpie</option>
+                        <option>squirrel</option>
+                        </select>
+                    </div>
+                    <div class=" col-lg-6 col-md-10 col-sm-10 col-10">
+                        <label for="confrange">Prediction Confidence: {{confidence}}</label>
+                        <input id="slider" name="confidence" data-slider-id='filtSlider' type="range"
+                            min="0" max="1" step="0.01" 
+                            value="{{confidence}}"/>
+                    </div>
+                </div>
+                <div class="row">
+                    <br/>
+                </div>
+                <div class="row top-padded">
+                    <div class="col-6 col-sm-6">
+                        <input type="submit" class="submit" value="Submit"/>
+                    </div>
+                </div>
+            </form>
             <div >
             <br>    
             </div>
-            <div class="progress">
-                <div class="progress-bar" role="progressbar" style="width: {{progress}};" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">{{progress}} Complete</div>
+            <div class="row left-padded right-padded">
+                <div class="progress col-lg-12 col-md-12 col-sm-12 col-12">
+                    <div class="progress-bar" role="progressbar" style="width: {{progress}};" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">{{progress}} Complete</div>
+                </div>
             </div>
             {% if show_eval %}
-            <table>
-            <tr>
-            <td>
-            <p>
-                {{filename}}:
-            </p>   
-            <img src="{{img}}" width='400'>
-            </td>
-            <td class='left-padded'>
-            <p>
-                Model selected a label of <strong>{{label}}</strong> with confidence <strong>{{label_conf}}</strong>
-            </p>
-            <form name="model_eval" action="./api/model_eval_submit" method="POST" onsubmit="">
-                <input type='hidden' name='utc_key' id='utc_key' value={{utc_key}}>
-                <p>
-                    Please select the correct label:
-                </p>
-                <p>
-                    <input type="checkbox" name="label" id="sparrow" value="sparrow"> sparrow </input><br>
-                    <input type="checkbox" name="label" id="chickadee" value="chickadee"> chickadee </input><br>
-                    <input type="checkbox" name="label" id="magpie" value="magpie"> magpie </input><br>
-                    <input type="checkbox" name="label" id="squirrel" value="squirrel"> squirrel </input><br>
-                    <input type="checkbox" name="label" id="other" value="other"> other: </input>
-                    <input type="text" name="othertext" id="othertext"/><br>
-                </p>
-                <p>
-                    <input type=submit value=Submit>
-                </p>
-            </form>
-            </td>
-            </tr>
-            </table>
+            <div class="row">
+                <div class="top-padded col-lg-6 col-md-6 col-sm-10 col-10">
+                    <h5>
+                        {{filename}}:
+                    </h5>   
+                    <img class="evaluate_img" src="{{img}}" width='400'>
+                </div>
+                <div class="top-padded col-lg-6 col-md-6 col-sm-10 col-10">
+                    <p><br></p>
+                    <p>
+                        Model selected a label of <strong>{{label}}</strong> with confidence <strong>{{label_conf}}</strong>
+                    </p>
+                    <form name="model_eval" action="./api/model_eval_submit" method="POST" onsubmit="">
+                        <input type='hidden' name='utc_key' id='utc_key' value={{utc_key}}>
+                        <p>
+                            Please select the correct label:
+                        </p>
+                        <p>
+                            <input type="checkbox" name="label" id="sparrow" value="sparrow"> sparrow </input><br>
+                            <input type="checkbox" name="label" id="chickadee" value="chickadee"> chickadee </input><br>
+                            <input type="checkbox" name="label" id="magpie" value="magpie"> magpie </input><br>
+                            <input type="checkbox" name="label" id="squirrel" value="squirrel"> squirrel </input><br>
+                            <input type="checkbox" name="label" id="other" value="other"> other: </input>
+                            <input type="text" name="othertext" id="othertext"/><br>
+                        </p>
+                        <p>
+                            <input type=submit value=Submit>
+                        </p>
+                    </form>
+                </div>
+            </div>
             {% endif %}
             {% if not show_eval %}
             <p>
