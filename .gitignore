@@ -8,7 +8,7 @@ webapp/birbcam-app/__pycache__/*
 notebooks/__pycache__/*
 
 # Saved images
-imgs/*
+imgs/*.jpg
 camera-app/tests/test_temp/*
 webapp/birbcam-app/static/imgs
 
