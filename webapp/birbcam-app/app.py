@@ -213,8 +213,10 @@ def get_data():
                 item = {'date':dt, 'image':fn, 'confidence':1.0, 'reviewed':True, 'true_label':true_label}
                 result_dict[tl].append(item)
         else:
-            item = {'date':dt, 'image':fn, 'confidence': conf, 'reviewed':False, 'true_label':true_label}
-            result_dict[pred].append(item)
+            pred_labels = pred.split(',')
+            for pl in pred_labels:
+                item = {'date':dt, 'image':fn, 'confidence': conf, 'reviewed':False, 'true_label':pred_labels}
+                result_dict[pl].append(item)
     results = []
     for k, v in result_dict.items():
         results.append({'name': k, 'data':v})
