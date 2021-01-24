@@ -43,3 +43,8 @@ This Python cloud function is used to facilitate model inference while the bugs 
 ## Notebooks
 
 The notebooks contain a variety of experiments and manual workflows for things like preparing new training data.
+
+
+## Associated Blog Posts
+
+* [Birb Cam - January 23, 2021](http://everettsprojects.com/2021/01/23/birbcam.html)
