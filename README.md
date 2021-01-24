@@ -1,6 +1,25 @@
 # Birb Cam
 
-A Raspberry Pi project designed to detect animals visiting my balcony with a webcam. Store images from their visits and present the temporal patterns of their visitation in a simple flask app. 
+A Raspberry Pi project designed to detect animals visiting my balcony with a webcam. Store images from their visits and present the temporal patterns of their visitation in a simple Flask app. 
+
+
+## Running the Project
+
+To start capturing images and classifying them just run the camera-app/birbcam.py script:
+
+```
+cd camera-app
+python birbcam.py
+```
+
+To start the web app I simply use the built in Flask server, since this is just running on my LAN with low traffic:
+
+```
+cd webapp/birbcam-app
+python -m flask run -h <<LAN IP>> -p 5000
+```
+
+If deploying this project on the public internet, please consult the [Flask deployment options documentation](https://flask.palletsprojects.com/en/1.1.x/deploying/).
 
 ## Project Structure
 
