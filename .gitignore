@@ -9,6 +9,7 @@ notebooks/__pycache__/*
 
 # Saved images
 imgs/*.jpg
+imgs/training/*.jpg
 camera-app/tests/test_temp/*
 webapp/birbcam-app/static/imgs
 
