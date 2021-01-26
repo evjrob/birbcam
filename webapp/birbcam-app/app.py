@@ -48,7 +48,7 @@ def main_visualization_page():
 def model_evaluation_page():
     confidence = request.args.get('confidence', default=None)
     if confidence is None:
-        confidence = 1.0
+        confidence = 0.95
     else:
         confidence = float(confidence)
     prediction = request.args.get('prediction', default=None)
