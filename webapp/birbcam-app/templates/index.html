@@ -14,6 +14,7 @@
             <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="selected_label"></h5>
+                <span id="inat"></span>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
                 </button>
@@ -120,6 +121,17 @@
             zoomEnd.textContent = cleanDate(chart.scale().domain()[1]);
         };
 
+        function inaturalist_upload(utc_datetime){
+            $.ajax({
+                type: "GET",
+                url: "/api/inaturalist",
+                data: {
+                    "utc_key": utc_datetime
+                },
+                cache: false,
+            });
+        }
+
         const tooltip = d3
             .select('body')
             .append('div')
@@ -176,10 +188,22 @@
                 onClick: visit => {
                     $('#selected_modal').modal();
                     d3.select('#selected_label').text(`${visit.date} - ${visit.true_label}`);
+                    console.log(visit.inat_id);
+                    if(!visit.inat_id) {
+                        d3.select('#inat')
+                            .html("");
+                    } else {
+                        d3.select('#inat')
+                            .html(
+                                `<a target="_blank" href="https://www.inaturalist.org/observations/${visit.inat_id}">
+                                    <img src="/static/imgs/inat_logo.svg" width="25rem">
+                                </a>`);
+                    }
                     d3.select('#selected_image')
                         .html(`<img class="preview" src="/api/serve_image/${visit.image}" />`);
                     d3.select('.modal-footer')
                         .html(`<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                               <button type="button" class="btn btn-success" onclick="inaturalist_upload('${visit.utc_datetime}')">iNat Upload</button>
                                <button type="button" class="btn btn-primary" onclick="window.location='/revise?dt_key=${visit.date}';">Revise</button>`);
                 },
             },

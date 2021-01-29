@@ -7,6 +7,8 @@ from PIL import Image
 import sqlite3
 
 from flask import Flask, redirect, render_template, request, jsonify, send_file
+from pyinaturalist.rest_api import get_access_token, create_observation, update_observation, add_photo_to_observation
+from secrets import INAT_USERNAME, INAT_PASSWORD, INAT_APP_ID, INAT_APP_SECRET
 
 # Image directory
 img_dir = '../../imgs/'
@@ -42,6 +44,110 @@ def brighten_image(img, minimum_brightness=0.4):
 @app.route('/')
 def main_visualization_page():
     return render_template('index.html')
+
+# Route for inaturalist api upload
+@app.route('/api/inaturalist', methods=['GET'])
+def inaturalist_api():
+    utc_key = str(request.args.get('utc_key', default=None))
+    if utc_key is None:
+        return
+    print(f'key: {utc_key}')
+    conn = sqlite3.connect('../../data/model_results.db', timeout=15)
+    query = '''SELECT datetime, file_name, prediction, true_label, inaturalist_id
+               FROM results 
+               WHERE utc_datetime = ?
+               LIMIT 1;'''
+    c = conn.cursor()
+    c.execute(query, (utc_key,))
+    row = c.fetchone()
+    if row is not None:
+        obs_timestamp = row[0]
+        img_fn = row[1]
+        pred_label = row[2]
+        true_label = row[3]
+        existing_inat_id = row[4]
+    if true_label is not None:
+        obs_label = true_label
+    else:
+        obs_label = pred_label
+
+    # Get a token for the inaturalist API
+    token = get_access_token(
+        username=INAT_USERNAME,
+        password=INAT_PASSWORD,
+        app_id=INAT_APP_ID,
+        app_secret=INAT_APP_SECRET,
+    )
+
+    latitude = 51.03128580819969
+    longitude = -114.10264233236377
+    positional_accuracy = 3
+    obs_file_name = f'../../imgs/{img_fn}'
+
+    species_map = {
+        # Passer domesticus
+        'sparrow': {
+            'taxa_id': 13858,
+        },
+        # Poecile atricapillus
+        'chickadee': {
+            'taxa_id': 144815,
+        },
+        # Pica hudsonia
+        'magpie': {
+            'taxa_id': 143853,
+        },
+        # Sciurus carolinensis
+        'squirrel': {
+            'taxa_id': 46017,
+        }
+    }
+
+    # Upload the observation to iNaturalist
+    if existing_inat_id is None:
+        response = create_observation(
+            taxon_id=species_map[obs_label]['taxa_id'], # Passer domesticus
+            observed_on_string=obs_timestamp,
+            time_zone='Mountain Time (US & Canada)',
+            description='Birb Cam image upload: https://github.com/evjrob/birbcam',
+            tag_list=f'{obs_label}, Canada',
+            latitude=latitude,
+            longitude=longitude,
+            positional_accuracy=positional_accuracy, # meters,
+            access_token=token,
+        )
+        inat_observation_id = response[0]['id']
+        # Upload the image captured
+        r = add_photo_to_observation(
+            inat_observation_id,
+            access_token=token,
+            photo=obs_file_name,
+        )
+    else:
+        inat_observation_id = existing_inat_id
+        update_observation(
+            inat_observation_id,
+            taxon_id=species_map[obs_label]['taxa_id'], # Passer domesticus
+            observed_on_string=obs_timestamp,
+            time_zone='Mountain Time (US & Canada)',
+            description='Birb Cam image upload: https://github.com/evjrob/birbcam',
+            tag_list=f'{obs_label}, Canada',
+            latitude=latitude,
+            longitude=longitude,
+            positional_accuracy=positional_accuracy, # meters,
+            access_token=token,
+        )
+        r = add_photo_to_observation(
+            inat_observation_id,
+            access_token=token,
+            photo=obs_file_name,
+        )
+    
+    # Update the row in the database with the inaturalist id
+    c.execute("UPDATE results SET inaturalist_id=? WHERE utc_datetime=?;", (inat_observation_id, utc_key))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer)
 
 # Route for model evaluation page
 @app.route('/eval', methods=['GET'])
@@ -195,7 +301,7 @@ def get_data():
     # Fetch the selected data range from the database
     conn = sqlite3.connect('../../data/model_results.db', timeout=15)
     c = conn.cursor()
-    c.execute('''SELECT datetime, file_name, prediction, confidence, true_label 
+    c.execute('''SELECT utc_datetime, datetime, file_name, prediction, confidence, true_label, inaturalist_id
                  FROM results 
                  WHERE datetime>=? 
                  AND datetime<=? 
@@ -206,16 +312,28 @@ def get_data():
     conn.close()
     result_dict = {l:[] for l in labels}
     for event in rows:
-        dt, fn, pred, conf, true_label = event
+        utc_dt, dt, fn, pred, conf, true_label, inat_id = event
         if true_label is not None:
             true_labels = true_label.split(',')
             for tl in true_labels:
-                item = {'date':dt, 'image':fn, 'confidence':1.0, 'reviewed':True, 'true_label':true_label}
+                item = {'utc_datetime':utc_dt, 
+                    'date':dt, 
+                    'image':fn, 
+                    'confidence':1.0, 
+                    'reviewed':True, 
+                    'true_label':true_label,
+                    'inat_id': inat_id}
                 result_dict[tl].append(item)
         else:
             pred_labels = pred.split(',')
             for pl in pred_labels:
-                item = {'date':dt, 'image':fn, 'confidence': conf, 'reviewed':False, 'true_label':pred_labels}
+                item = {'utc_datetime':utc_dt, 
+                    'date':dt, 
+                    'image':fn, 
+                    'confidence': conf, 
+                    'reviewed':False, 
+                    'true_label':pred_labels,
+                    'inat_id': inat_id}
                 result_dict[pl].append(item)
     results = []
     for k, v in result_dict.items():
