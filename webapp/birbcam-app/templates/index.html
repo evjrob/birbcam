@@ -14,7 +14,7 @@
             <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="selected_label"></h5>
-                <span id="inat"></span>
+                <span id="inat_logo"></span>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
                 </button>
@@ -146,7 +146,7 @@
             .done(
                 function(r) {
                     var inat_id = r.inat_id;
-                    d3.select('#inat')
+                    d3.select('#inat_logo')
                     .html(
                         `<a target="_blank" href="https://www.inaturalist.org/observations/${inat_id}">
                         <img src="/static/imgs/inat_logo.svg" width="25rem">
@@ -191,7 +191,7 @@
                         .html(
                             `
                             <div>
-                                <h5>${visit.date}</h5>
+                                <h5>${visit.date}<span id="tooltip_inat_logo"></span></h5>
                             </div>
                             <div class="visit">
                                 <img class="preview" src="/api/serve_image/${visit.image}" />
@@ -200,6 +200,13 @@
                         )
                         .style('left', `${d3.event.pageX - 30}px`)
                         .style('top', `${d3.event.pageY + 20}px`);
+                    if(!visit.inat_id) {
+                        d3.select('#tooltip_inat_logo')
+                            .html("");
+                    } else {
+                        d3.select('#tooltip_inat_logo')
+                            .html(`<img src="/static/imgs/inat_logo.svg" width="25rem">`);
+                    }
                 },
                 onMouseOut: () => {
                     tooltip
@@ -212,10 +219,10 @@
                     $('#selected_modal').modal();
                     d3.select('#selected_label').text(`${visit.date} - ${visit.true_label}`);
                     if(!visit.inat_id) {
-                        d3.select('#inat')
+                        d3.select('#inat_logo')
                             .html("");
                     } else {
-                        d3.select('#inat')
+                        d3.select('#inat_logo')
                             .html(
                                 `<a target="_blank" href="https://www.inaturalist.org/observations/${visit.inat_id}">
                                     <img src="/static/imgs/inat_logo.svg" width="25rem">
