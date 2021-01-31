@@ -165,8 +165,8 @@ def image_processor(queue, db_path=db_path, save_dir=save_dir, model_path=model_
             # Write results to sqlite3 database
             conn = sqlite3.connect(db_path, timeout=60)
             with conn:
-                conn.execute("INSERT INTO results VALUES (?,?,?,?,?,?)", 
-                    (utc_timestamp, timestamp, filename, pred_label, confidence, None))
+                conn.execute("INSERT INTO results VALUES (?,?,?,?,?,?,?)", 
+                    (utc_timestamp, timestamp, filename, pred_label, confidence, None, None))
             conn.close()
             logging.info(f'Processed image with timestamp {timestamp} and found label(s) {pred_label}')
         except Exception as e:
