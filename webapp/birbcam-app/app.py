@@ -46,9 +46,12 @@ def main_visualization_page():
     return render_template('index.html')
 
 # Route for inaturalist api upload
-@app.route('/api/inaturalist', methods=['GET'])
+@app.route('/api/inaturalist', methods=['POST'])
 def inaturalist_api():
-    utc_key = str(request.args.get('utc_key', default=None))
+    json_data = json.loads(request.data)
+    print(json_data)
+    utc_key = json_data['utc_key']
+    print(f'utc_key: {utc_key}')
     if utc_key is None:
         return
     print(f'key: {utc_key}')
@@ -60,7 +63,9 @@ def inaturalist_api():
     c = conn.cursor()
     c.execute(query, (utc_key,))
     row = c.fetchone()
-    if row is not None:
+    if row is None:
+        return
+    else:
         obs_timestamp = row[0]
         img_fn = row[1]
         pred_label = row[2]
@@ -147,7 +152,7 @@ def inaturalist_api():
     c.execute("UPDATE results SET inaturalist_id=? WHERE utc_datetime=?;", (inat_observation_id, utc_key))
     conn.commit()
     conn.close()
-    return redirect(request.referrer)
+    return jsonify({'inat_id': inat_observation_id})
 
 # Route for model evaluation page
 @app.route('/eval', methods=['GET'])

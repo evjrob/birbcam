@@ -56,8 +56,6 @@
 
         var end_date = addDays(new Date(), 1);
         var start_date = new Date('2020-11-30');
-        //console.log(start_date);
-        //console.log(end_date);
         
         const numberVisitsContainer = document.getElementById('numberVisits');
         const zoomStart = document.getElementById('zoomStart');
@@ -121,15 +119,40 @@
             zoomEnd.textContent = cleanDate(chart.scale().domain()[1]);
         };
 
-        function inaturalist_upload(utc_datetime){
+        function updateDataPoint(utc_datetime, inat_id) {
+            data = chart._filteredData;
+            var imax = data.length;
+            for (i = 0; i < imax; i++) {
+                var jmax = data[i]["data"].length;
+                for (j = 0; j < jmax; j++) {
+                    if (data[i]["data"][j].utc_datetime == utc_datetime) {
+                        chart._filteredData[i]["data"][j].inat_id = inat_id;
+                    }
+                }
+            }
+        };
+
+        function inaturalistUpload(utc_datetime){
             $.ajax({
-                type: "GET",
+                type: "POST",
                 url: "/api/inaturalist",
-                data: {
+                contentType: "application/json; charset=utf-8",
+                data: JSON.stringify({
                     "utc_key": utc_datetime
-                },
+                }),
+                dataType: "json",
                 cache: false,
-            });
+            })
+            .done(
+                function(r) {
+                    var inat_id = r.inat_id;
+                    d3.select('#inat')
+                    .html(
+                        `<a target="_blank" href="https://www.inaturalist.org/observations/${inat_id}">
+                        <img src="/static/imgs/inat_logo.svg" width="25rem">
+                        </a>`);
+                    updateDataPoint(utc_datetime, inat_id)
+                });
         }
 
         const tooltip = d3
@@ -188,7 +211,6 @@
                 onClick: visit => {
                     $('#selected_modal').modal();
                     d3.select('#selected_label').text(`${visit.date} - ${visit.true_label}`);
-                    console.log(visit.inat_id);
                     if(!visit.inat_id) {
                         d3.select('#inat')
                             .html("");
@@ -203,7 +225,7 @@
                         .html(`<img class="preview" src="/api/serve_image/${visit.image}" />`);
                     d3.select('.modal-footer')
                         .html(`<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                               <button type="button" class="btn btn-success" onclick="inaturalist_upload('${visit.utc_datetime}')">iNat Upload</button>
+                               <button type="button" class="btn btn-success" onclick="inaturalistUpload('${visit.utc_datetime}')">iNat Upload</button>
                                <button type="button" class="btn btn-primary" onclick="window.location='/revise?dt_key=${visit.date}';">Revise</button>`);
                 },
             },
