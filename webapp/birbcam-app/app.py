@@ -1,5 +1,6 @@
 import base64
 import cv2 as cv
+import datetime as dt
 import io
 import json
 import numpy as np
@@ -9,6 +10,9 @@ import sqlite3
 from flask import Flask, redirect, render_template, request, jsonify, send_file
 from pyinaturalist.rest_api import get_access_token, create_observation, update_observation, add_photo_to_observation
 from secrets import INAT_USERNAME, INAT_PASSWORD, INAT_APP_ID, INAT_APP_SECRET
+
+# Datetime format for printing and string representation
+dt_fmt = '%Y-%m-%dT%H:%M:%S'
 
 # Image directory
 img_dir = '../../imgs/'
@@ -110,46 +114,50 @@ def inaturalist_api():
 
     # Upload the observation to iNaturalist
     if existing_inat_id is None:
-        response = create_observation(
-            taxon_id=species_map[obs_label]['taxa_id'], # Passer domesticus
-            observed_on_string=obs_timestamp,
-            time_zone='Mountain Time (US & Canada)',
-            description='Birb Cam image upload: https://github.com/evjrob/birbcam',
-            tag_list=f'{obs_label}, Canada',
-            latitude=latitude,
-            longitude=longitude,
-            positional_accuracy=positional_accuracy, # meters,
-            access_token=token,
-        )
-        inat_observation_id = response[0]['id']
+        # Check if there's an existing inat id within 5 minutes of this image
+        # upload this image to that observation if so.
+        window_timestamp = dt.datetime.fromisoformat(utc_key) - dt.timedelta(minutes=5)
+        window_timestamp = window_timestamp.strftime(dt_fmt)
+        query = '''SELECT inaturalist_id
+                   FROM results 
+                   WHERE utc_datetime <= :utc_dt
+                   AND utc_datetime >= :prev_dt
+                   AND inaturalist_id IS NOT NULL
+                   AND (true_label = :lab OR (true_label IS NULL AND prediction = :lab))
+                   ORDER BY utc_datetime DESC
+                   LIMIT 1;'''
+        c.execute(query, {'utc_dt':utc_key, 'prev_dt': window_timestamp, 'lab': obs_label})
+        row = c.fetchone()
+        if row is None or row[0] is None:
+            response = create_observation(
+                taxon_id=species_map[obs_label]['taxa_id'],
+                observed_on_string=obs_timestamp,
+                time_zone='Mountain Time (US & Canada)',
+                description='Birb Cam image upload: https://github.com/evjrob/birbcam',
+                tag_list=f'{obs_label}, Canada',
+                latitude=latitude,
+                longitude=longitude,
+                positional_accuracy=positional_accuracy, # meters,
+                access_token=token,
+            )
+            inat_observation_id = response[0]['id']
+            print(f'No iNaturalist id found in previous five minutes, creating new row with id {inat_observation_id}.')
+        else:
+            inat_observation_id = row[0]
+            print(f'Found iNaturalist id in previous five minutes, adding to id {inat_observation_id}.')
         # Upload the image captured
         r = add_photo_to_observation(
             inat_observation_id,
             access_token=token,
             photo=obs_file_name,
         )
+        # Update the row in the database with the inaturalist id
+        c.execute("UPDATE results SET inaturalist_id=? WHERE utc_datetime=?;", (inat_observation_id, utc_key))
     else:
+        # This image had already been uploaded, we do not want to upload it again
         inat_observation_id = existing_inat_id
-        update_observation(
-            inat_observation_id,
-            taxon_id=species_map[obs_label]['taxa_id'], # Passer domesticus
-            observed_on_string=obs_timestamp,
-            time_zone='Mountain Time (US & Canada)',
-            description='Birb Cam image upload: https://github.com/evjrob/birbcam',
-            tag_list=f'{obs_label}, Canada',
-            latitude=latitude,
-            longitude=longitude,
-            positional_accuracy=positional_accuracy, # meters,
-            access_token=token,
-        )
-        r = add_photo_to_observation(
-            inat_observation_id,
-            access_token=token,
-            photo=obs_file_name,
-        )
+        print(f'Found existing iNaturalist id {inat_observation_id} for row, skipping.')
     
-    # Update the row in the database with the inaturalist id
-    c.execute("UPDATE results SET inaturalist_id=? WHERE utc_datetime=?;", (inat_observation_id, utc_key))
     conn.commit()
     conn.close()
     return jsonify({'inat_id': inat_observation_id})
