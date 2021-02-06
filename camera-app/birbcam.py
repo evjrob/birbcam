@@ -8,11 +8,13 @@ from io import BytesIO
 import logging
 import multiprocessing as mp
 import numpy as np
+import os
 from PIL import Image
 import pytz
 import requests
 from scipy.signal import medfilt2d
 from secrets import ENDPOINT
+import shutil
 import sqlite3
 import time
 import traceback
@@ -90,7 +92,44 @@ def camera_loop(queue, stop_time):
     capture.release()
 
 
+def prediction_cleanup():
+    conn = sqlite3.connect(db_path, timeout=60)
+    c = conn.cursor()
+    # Remove the correctly predicted nones with high confidence
+    c.execute('''SELECT * FROM results 
+        WHERE (true_label = "none" 
+        AND prediction = "none" 
+        AND confidence >= 0.75);''')
+    rows = c.fetchall()
+    l = len(rows)
+    logging.info(f'Removing {l} rows with true label of "none" and confidence >= 0.75')
+    for i, row in enumerate(rows):
+        utc_datetime, datetime, file_name, prediction, confidence, label, _ = row
+        if os.path.exists(f'{save_dir}{file_name}'):
+            os.remove(f'{save_dir}{file_name}')
+        c.execute('''DELETE FROM results WHERE utc_datetime = ?;''', (utc_datetime,))
+    # Remove very high confidence none predictions more than two days old
+    date_thresh = dt.datetime.now() - dt.timedelta(days=2)
+    date_thresh = date_thresh.strftime(dt_fmt)
+    c.execute('''SELECT * FROM results 
+        WHERE true_label IS NULL 
+        AND prediction= "none" 
+        AND confidence > 0.95 
+        AND datetime <= ?;''', (date_thresh,))
+    rows = c.fetchall()
+    l = len(rows)
+    logging.info(f'Removing {l} rows with predicted label of "none" and confidence > 0.95')
+    for i, row in enumerate(rows):
+        utc_datetime, datetime, file_name, prediction, confidence, label, _ = row
+        if os.path.exists(f'{save_dir}{file_name}'):
+            os.remove(f'{save_dir}{file_name}')
+        c.execute('''DELETE FROM results WHERE utc_datetime = ?;''', (utc_datetime,))
+    conn.commit()
+    conn.close()
+
+
 def night_pause_loop(stop_time):
+    prediction_cleanup()
     current_time = dt.datetime.now(tz=tz)
     while current_time < stop_time:
         current_time = dt.datetime.now(tz=tz)
