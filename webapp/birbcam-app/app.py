@@ -116,7 +116,7 @@ def inaturalist_api():
     if existing_inat_id is None:
         # Check if there's an existing inat id within 5 minutes of this image
         # upload this image to that observation if so.
-        window_timestamp = dt.datetime.fromisoformat(utc_key) - dt.timedelta(minutes=5)
+        window_timestamp = dt.datetime.fromisoformat(utc_key) - dt.timedelta(minutes=10)
         window_timestamp = window_timestamp.strftime(dt_fmt)
         query = '''SELECT inaturalist_id
                    FROM results 
@@ -141,10 +141,10 @@ def inaturalist_api():
                 access_token=token,
             )
             inat_observation_id = response[0]['id']
-            print(f'No iNaturalist id found in previous five minutes, creating new row with id {inat_observation_id}.')
+            print(f'No iNaturalist id found in previous ten minutes, creating new row with id {inat_observation_id}.')
         else:
             inat_observation_id = row[0]
-            print(f'Found iNaturalist id in previous five minutes, adding to id {inat_observation_id}.')
+            print(f'Found iNaturalist id in previous ten minutes, adding to id {inat_observation_id}.')
         # Upload the image captured
         r = add_photo_to_observation(
             inat_observation_id,
