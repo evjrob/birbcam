@@ -67,3 +67,4 @@ The notebooks contain a variety of experiments and manual workflows for things l
 ## Associated Blog Posts
 
 * [Birb Cam - January 23, 2021](http://everettsprojects.com/2021/01/23/birbcam.html)
+* [Sharing Birb Cam Observations with the World Through iNaturalist - February 7, 2021](http://everettsprojects.com/2021/02/07/sharing-birbcam-with-inaturalist.html)
