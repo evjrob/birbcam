@@ -108,8 +108,8 @@ def prediction_cleanup():
         if os.path.exists(f'{save_dir}{file_name}'):
             os.remove(f'{save_dir}{file_name}')
         c.execute('''DELETE FROM results WHERE utc_datetime = ?;''', (utc_datetime,))
-    # Remove very high confidence none predictions more than two days old
-    date_thresh = dt.datetime.now() - dt.timedelta(days=2)
+    # Remove very high confidence none predictions more than a days old
+    date_thresh = dt.datetime.now() - dt.timedelta(days=1)
     date_thresh = date_thresh.strftime(dt_fmt)
     c.execute('''SELECT * FROM results 
         WHERE true_label IS NULL 
