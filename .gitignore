@@ -26,3 +26,4 @@ camera-app/tests/test_assets/*
 # Secrets
 */secrets.py
 */*/secrets.py
+*/client_secrets.json
