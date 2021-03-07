@@ -7,12 +7,15 @@ A Raspberry Pi project designed to detect animals visiting my balcony with a web
 
 1. Please install OpenCV (4.5.1-1) on the Raspberry Pi. I am running the aarch64 build of Arch, and have installed it via pacman. You may need to install it by other means depending on your operating system.
 
-2. You will first need to create a cloud function in Google Cloud Platform. Please set up an account for GCP and the upload the contents of the cloud-function folder there to create the function and REST API. Take the endpoint URL and define it in camera-app/secrets.py:
+2. You will need to create a Google Cloud Platform account. Please create a project there contianing a cloud storage bucket contianing the model artifact, and a cloud function. I use the birbcam_training.ipynb jupyter notebook in Google Colab to create this model artifact.
+
+3. Please upload the contents of the cloud-function folder to create the function and REST API. You may need to adjust the parameters at the top of main.py to access the model artifact within your own project. Take the endpoint URL and define it in camera-app/secrets.py:
 
 ```
 ENDPOINT = '<my endpoint url>'
 ```
-3. Please set up an iNaturalist account and setup OAuth application authentication (https://www.inaturalist.org/oauth/applications/new). After setting up your project there, please add the necessary credentials to webapp/birbcam-app/secrets.py:
+
+4. Please set up an iNaturalist account and setup OAuth application authentication (https://www.inaturalist.org/oauth/applications/new). After setting up your project there, please add the necessary credentials to webapp/birbcam-app/secrets.py:
 
 ```
 INAT_USERNAME = '<my username>'
