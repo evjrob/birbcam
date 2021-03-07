@@ -3,16 +3,35 @@
 A Raspberry Pi project designed to detect animals visiting my balcony with a webcam. Store images from their visits and present the temporal patterns of their visitation in a simple Flask app. Now integrated with iNaturalist to provide community access to select high quality images and observations: https://www.inaturalist.org/observations?place_id=any&user_id=evjrob&verifiable=any
 
 
+## Setup
+
+1. Please install OpenCV (4.5.1-1) on the Raspberry Pi. I am running the aarch64 build of Arch, and have installed it via pacman. You may need to install it by other means depending on your operating system.
+
+2. You will first need to create a cloud function in Google Cloud Platform. Please set up an account for GCP and the upload the contents of the cloud-function folder there to create the function and REST API. Take the endpoint URL and define it in camera-app/secrets.py:
+
+```
+ENDPOINT = '<my endpoint url>'
+```
+3. Please set up an iNaturalist account and setup OAuth application authentication (https://www.inaturalist.org/oauth/applications/new). After setting up your project there, please add the necessary credentials to webapp/birbcam-app/secrets.py:
+
+```
+INAT_USERNAME = '<my username>'
+INAT_PASSWORD = '<my password>'
+INAT_APP_ID = '<my app id>'
+INAT_APP_SECRET = '<my app secret>'
+```
+
+
 ## Running the Project
 
-To start capturing images and classifying them just run the camera-app/birbcam.py script:
+1. After completing the above setup, the camera-app portion of the project can be started by running the camera-app/birbcam.py script:
 
 ```
 cd camera-app
 python birbcam.py
 ```
 
-To start the web app I simply use the built in Flask server, since this is just running on my LAN with low traffic:
+2. To start the web app I simply use the built in Flask server, since this is just running on my LAN with low traffic:
 
 ```
 cd webapp/birbcam-app
