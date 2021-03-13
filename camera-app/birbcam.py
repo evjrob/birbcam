@@ -3,7 +3,6 @@ from astral.sun import sun
 import base64
 import cv2 as cv
 import datetime as dt
-from fastai.vision.all import *
 from io import BytesIO
 import logging
 import multiprocessing as mp
@@ -17,6 +16,7 @@ import shutil
 import sqlite3
 import time
 import traceback
+from fastai.vision.all import *
 
 
 # Set up logging
@@ -28,6 +28,8 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+
+
 
 # Timezone for python datetime objects
 tz = pytz.timezone('America/Edmonton')
@@ -181,9 +183,20 @@ def image_processor(queue, db_path=db_path, save_dir=save_dir, model_path=model_
             rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
 
             # Get the predicted label and confidence
+<<<<<<< HEAD
             pred = learn.predict(rgb_frame)
             labels = pred[0] 
             confidences = pred[2].tolist()
+=======
+            pil_img = Image.fromarray(rgb_frame)
+            buf = BytesIO()
+            pil_img.save(buf, format="JPEG")
+            b64_img = base64.b64encode(buf.getvalue()).decode("utf-8")
+            r = requests.post(CF_ENDPOINT, json={"b64_img":b64_img})
+            results = r.json()
+            labels = results['labels']
+            confidences = [c[1] for c in results['confidence']]
+>>>>>>> 72f6af1... Dockerise camera-app
             if len(labels) == 0:
                 labels = ['none']
                 confidence = 1 - max(confidences)

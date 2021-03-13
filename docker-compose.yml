@@ -1,0 +1,14 @@
+---
+version: '3.7'
+services:
+  camera:
+    build: 
+      context: ./camera-app
+    image: birbcam/camera
+    init: true
+    volumes:
+      - ./camera-app/:/usr/app/
+      - /opt/vc:/opt/vc
+      - /dev/video0
+      - /dev/video1 
+    command: python3 /usr/app/birbcam.py
