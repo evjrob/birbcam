@@ -12,3 +12,14 @@ services:
       - /dev/video0
       - /dev/video1 
     command: python3 /usr/app/birbcam.py
+  webapp:
+    build:
+      context: ./webapp
+    image: birbcam/webapp
+    init: true
+    volumes:
+      - ./webapp/birbcam-app:/app
+    ports:
+      - "8080:80"
+    env_file:
+      - webapp/webapp.env
