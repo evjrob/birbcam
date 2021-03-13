@@ -9,7 +9,14 @@ import sqlite3
 
 from flask import Flask, redirect, render_template, request, jsonify, send_file
 from pyinaturalist.rest_api import get_access_token, create_observation, update_observation, add_photo_to_observation
-from secrets import INAT_USERNAME, INAT_PASSWORD, INAT_APP_ID, INAT_APP_SECRET
+
+import os
+
+INAT_USERNAME = os.environ['INAT_USERNAME']
+INAT_PASSWORD = os.environ['INAT_PASSWORD']
+INAT_APP_ID = os.environ['INAT_APP_ID']
+INAT_APP_SECRET = os.environ['INAT_APP_SECRET']
+
 
 # Datetime format for printing and string representation
 dt_fmt = '%Y-%m-%dT%H:%M:%S'
@@ -367,3 +374,7 @@ def serve_image(img_fn):
     # move to beginning of file so `send_file()` it will read from start    
     file_object.seek(0)
     return send_file(file_object, mimetype='image/PNG')
+
+if __name__ == "__main__":
+    # Only for debugging while developing
+    app.run(host='0.0.0.0', debug=True, port=80)
