@@ -16,6 +16,9 @@ services:
     command: python3 /usr/app/birbcam.py
     environment:
       - DB_PATH=/data/model.db
+      - MODEL_PATH=/data/birbcam_prod.pkl
+      - BIRBCAM_PATH=/usr/app
+      - DATA_DIR=/data
     # runtime: "nvidia"
     env_file:
       - settings.env
@@ -29,6 +32,7 @@ services:
     working_dir: /app
     volumes:
       - ./webapp/birbcam-app:/app
+      - ./data/:/data/
     ports:
       - "8080:5000"
     env_file:
@@ -36,4 +40,7 @@ services:
     environment:
       - DB_PATH=/data/model.db
       - FLASK_APP=app.py
+      - MODEL_PATH=/data/birbcam_prod.pkl
+      - BIRBCAM_PATH=/app
+      - DATA_DIR=/data
     # runtime: "nvidia"

@@ -30,6 +30,8 @@ logging.basicConfig(
     ]
 )
 
+PROJECT_PATH = os.getenv("BIRBCAM_PATH", "../")
+DATA_DIR = os.getenv("DATA_DIR", os.path.join(PROJECT_PATH, "data/"))
 CAPTURE_MODE = os.getenv("CAPTURE_MODE", "")
 CAPTURE_DIR = os.getenv("CAPTURE_DIR", "/data")
 ROTATE_CAMERA = os.getenv("ROTATE_CAMERA", False)
@@ -39,6 +41,12 @@ BIRBCAM_LONGITUDE = float(os.getenv("BIRBCAM_LONGITUDE", "-114.066666"))
 LOCATION_NAME = os.getenv("LOCATION", "Calgary")
 REGION_NAME = os.getenv("REGION_NAME", "Canada")
 
+# Database path
+DB_PATH = os.getenv('DB_PATH', '../data/model_results.db')
+
+# Model artifact path
+MODEL_PATH = os.getenv('MODEL_PATH', '../models/birbcam_prod.pkl')
+
 # Timezone for python datetime objects
 tz = CUSTOM_TIMEZONE
 utc_tz = pytz.timezone('UTC')
@@ -47,18 +55,16 @@ utc_tz = pytz.timezone('UTC')
 dt_fmt = '%Y-%m-%dT%H:%M:%S'
 
 # Where to save captured frames with changes
-save_dir = '../imgs/'
+save_dir = os.path.join(DATA_DIR, 'imgs/')
+
+# Make the save dir if it doesn't exist
+os.makedirs(save_dir, exist_ok=True)
+
 
 # Create the Videoapture object for the webcam
 capture = cv.VideoCapture()
 capture.set(cv.CAP_PROP_FPS, 1)
 
-# Database path
-DB_PATH = os.getenv('DB_PATH', '../data/model_results.db')
-
-# Model artifact path
-model_path = '../models/birbcam_prod.pkl'
-    
 # Create the astral city location object
 city = LocationInfo(LOCATION_NAME, REGION_NAME, tz, BIRBCAM_LATITUDE, BIRBCAM_LONGITUDE) 
 
@@ -179,7 +185,7 @@ def main_loop(queue):
 
 
             
-def image_processor(queue, DB_PATH=DB_PATH, save_dir=save_dir, model_path=model_path):
+def image_processor(queue, DB_PATH=DB_PATH, save_dir=save_dir, model_path=MODEL_PATH):
     learn = load_learner(model_path)
     x = None
     while True:
