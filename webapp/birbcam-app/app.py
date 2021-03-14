@@ -12,9 +12,10 @@ from flask import Flask, redirect, render_template, request, jsonify, send_file
 from pyinaturalist.rest_api import get_access_token, create_observation, update_observation, add_photo_to_observation
 
 import os
-from inat_config import inat_latitude, inat_longitude, inat_positional_accuracy, inat_species_map
+from .inat_config import inat_latitude, inat_longitude, inat_positional_accuracy, inat_species_map
 
-PROJECT_PATH = os.environ['BIRBCAM_PATH']
+PROJECT_PATH = os.getenv("BIRBCAM_PATH", "../")
+DATA_DIR = os.getenv("DATA_DIR", os.path.join(PROJECT_PATH, "data/"))
 INAT_ENABLED = bool(os.getenv('BIRBCAM_INAT_ENABLED', 'False'))
 INAT_USERNAME = os.getenv('INAT_USERNAME', '')
 INAT_PASSWORD = os.getenv('INAT_PASSWORD', '')
@@ -30,6 +31,7 @@ app = Flask(__name__)
 app.jinja_env.auto_reload = True
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
+os.makedirs(os.path.join("DATA_DIR", "imgs"), exist_ok=True)
 
 def histogram_equalize(img):
     img_y_cr_cb = cv.cvtColor(img, cv.COLOR_BGR2YCrCb)
@@ -96,7 +98,7 @@ def inaturalist_api():
         app_secret=INAT_APP_SECRET,
     )
 
-    obs_file_name = f'{PROJECT_PATH}/imgs/{img_fn}'
+    obs_file_name = f'{DATA_DIR}/imgs/{img_fn}'
 
     # Upload the observation to iNaturalist
     if existing_inat_id is None:
@@ -195,7 +197,7 @@ def model_evaluation_page():
         label_conf = f'{label_conf:{precision}}'
 
         # Read the image and histogram nomalize it
-        img = cv.imread(f'{PROJECT_PATH}/imgs/{img_fn}')
+        img = cv.imread(f'{DATA_DIR}/imgs/{img_fn}')
         if img is None:
             print(utc_key)
             print(img_fn)
@@ -249,7 +251,7 @@ def label_revise_page():
         label = row[2]
 
         # Read the image and histogram nomalize it
-        img = cv.imread(f'{PROJECT_PATH}/imgs/{img_fn}')
+        img = cv.imread(f'{DATA_DIR}/imgs/{img_fn}')
         if img is None:
             print(utc_key)
             print(img_fn)
@@ -342,7 +344,7 @@ def get_data():
 
 @app.route('/api/serve_image/<string:img_fn>')
 def serve_image(img_fn):
-    img = cv.imread(f'{PROJECT_PATH}/imgs/{img_fn}')
+    img = cv.imread(f'{DATA_DIR}/imgs/{img_fn}')
     img = brighten_image(img)
     #img = histogram_equalize(img)
     img = Image.fromarray(img.astype('uint8'))
