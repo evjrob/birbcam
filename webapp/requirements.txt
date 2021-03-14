@@ -1,3 +1,4 @@
+Flask==1.1.2
 h5py==3.1.0
 hypothesis==5.43.3
 Jinja2==2.11.2
