@@ -9,24 +9,31 @@ services:
     volumes:
       - ./camera-app/:/usr/app/
       - /opt/vc:/opt/vc
+      - ./data/:/data/
     devices:
       - /dev/video0:/dev/video0
       - /dev/video1:/dev/video1
     command: python3 /usr/app/birbcam.py
-#uncomment line below for nvidia-docker
-#   runtime: "nvidia"
+    environment:
+      - DB_PATH=/data/model.db
+    # runtime: "nvidia"
+    env_file:
+      - settings.env
 
-    runtime: "nvidia"
   webapp:
     build:
       context: ./webapp
     image: birbcam/webapp
     init: true
+    command: flask run --host=0.0.0.0
+    working_dir: /app
     volumes:
       - ./webapp/birbcam-app:/app
     ports:
-      - "8080:80"
+      - "8080:5000"
     env_file:
-      - webapp/webapp.env
-#uncomment line below for nvidia-docker
-#    runtime: "nvidia"
+      - settings.env
+    environment:
+      - DB_PATH=/data/model.db
+      - FLASK_APP=app.py
+    # runtime: "nvidia"
