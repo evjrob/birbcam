@@ -4,6 +4,7 @@ import datetime as dt
 import io
 import json
 import numpy as np
+import os
 from PIL import Image
 import sqlite3
 
@@ -11,19 +12,18 @@ from flask import Flask, redirect, render_template, request, jsonify, send_file
 from pyinaturalist.rest_api import get_access_token, create_observation, update_observation, add_photo_to_observation
 
 import os
+from inat_config import inat_latitude, inat_longitude, inat_positional_accuracy, inat_species_map
 
+PROJECT_PATH = os.environ['BIRBCAM_PATH']
+INAT_ENABLED = bool(os.getenv('BIRBCAM_INAT_ENABLED', 'False'))
 INAT_USERNAME = os.getenv('INAT_USERNAME', '')
 INAT_PASSWORD = os.getenv('INAT_PASSWORD', '')
 INAT_APP_ID = os.getenv('INAT_APP_ID', '')
 INAT_APP_SECRET = os.getenv('INAT_APP_SECRET', '')
 DB_PATH = os.getenv('DB_PATH', '../data/model_results.db')
 
-
 # Datetime format for printing and string representation
 dt_fmt = '%Y-%m-%dT%H:%M:%S'
-
-# Image directory
-img_dir = '../../imgs/'
 
 # Create flask app
 app = Flask(__name__)
@@ -55,7 +55,7 @@ def brighten_image(img, minimum_brightness=0.4):
 # Route for main visualization page
 @app.route('/')
 def main_visualization_page():
-    return render_template('index.html')
+    return render_template('index.html', inat_enabled=INAT_ENABLED)
 
 # Route for inaturalist api upload
 @app.route('/api/inaturalist', methods=['POST'])
@@ -96,29 +96,7 @@ def inaturalist_api():
         app_secret=INAT_APP_SECRET,
     )
 
-    latitude = 51.03128580819969
-    longitude = -114.10264233236377
-    positional_accuracy = 3
-    obs_file_name = f'../../imgs/{img_fn}'
-
-    species_map = {
-        # Passer domesticus
-        'sparrow': {
-            'taxa_id': 13858,
-        },
-        # Poecile atricapillus
-        'chickadee': {
-            'taxa_id': 144815,
-        },
-        # Pica hudsonia
-        'magpie': {
-            'taxa_id': 143853,
-        },
-        # Sciurus carolinensis
-        'squirrel': {
-            'taxa_id': 46017,
-        }
-    }
+    obs_file_name = f'{PROJECT_PATH}/imgs/{img_fn}'
 
     # Upload the observation to iNaturalist
     if existing_inat_id is None:
@@ -138,14 +116,14 @@ def inaturalist_api():
         row = c.fetchone()
         if row is None or row[0] is None:
             response = create_observation(
-                taxon_id=species_map[obs_label]['taxa_id'],
+                taxon_id=inat_species_map[obs_label]['taxa_id'],
                 observed_on_string=obs_timestamp,
                 time_zone='Mountain Time (US & Canada)',
                 description='Birb Cam image upload: https://github.com/evjrob/birbcam',
                 tag_list=f'{obs_label}, Canada',
-                latitude=latitude,
-                longitude=longitude,
-                positional_accuracy=positional_accuracy, # meters,
+                latitude=inat_latitude,
+                longitude=inat_longitude,
+                positional_accuracy=inat_positional_accuracy, # meters,
                 access_token=token,
             )
             inat_observation_id = response[0]['id']
@@ -217,7 +195,7 @@ def model_evaluation_page():
         label_conf = f'{label_conf:{precision}}'
 
         # Read the image and histogram nomalize it
-        img = cv.imread(f'../../imgs/{img_fn}')
+        img = cv.imread(f'{PROJECT_PATH}/imgs/{img_fn}')
         if img is None:
             print(utc_key)
             print(img_fn)
@@ -271,7 +249,7 @@ def label_revise_page():
         label = row[2]
 
         # Read the image and histogram nomalize it
-        img = cv.imread(f'../../imgs/{img_fn}')
+        img = cv.imread(f'{PROJECT_PATH}/imgs/{img_fn}')
         if img is None:
             print(utc_key)
             print(img_fn)
@@ -364,7 +342,7 @@ def get_data():
 
 @app.route('/api/serve_image/<string:img_fn>')
 def serve_image(img_fn):
-    img = cv.imread(f'../../imgs/{img_fn}')
+    img = cv.imread(f'{PROJECT_PATH}/imgs/{img_fn}')
     img = brighten_image(img)
     #img = histogram_equalize(img)
     img = Image.fromarray(img.astype('uint8'))

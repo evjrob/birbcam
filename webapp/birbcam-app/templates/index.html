@@ -230,10 +230,17 @@
                     }
                     d3.select('#selected_image')
                         .html(`<img class="preview" src="/api/serve_image/${visit.image}" />`);
+                    
+                    {% if inat_enabled %}
                     d3.select('.modal-footer')
                         .html(`<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                                <button type="button" class="btn btn-success" onclick="inaturalistUpload('${visit.utc_datetime}')">iNat Upload</button>
                                <button type="button" class="btn btn-primary" onclick="window.location='/revise?dt_key=${visit.date}';">Revise</button>`);
+                    {% else %}
+                    d3.select('.modal-footer')
+                        .html(`<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                               <button type="button" class="btn btn-primary" onclick="window.location='/revise?dt_key=${visit.date}';">Revise</button>`);
+                    {% endif %}
                 },
             },
         });
