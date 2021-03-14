@@ -10,7 +10,7 @@
         <div class="container">
             <h3>Birb Cam Model Evaluation</h3>
             <h4>Filters:</h4>
-            <form id="filter" action="http://192.168.0.24:5000/eval" method="GET">
+            <form id="filter" action="{{ request.base_url }}" method="GET">
                 <div class="row">
                     <div class=" col-lg-6 col-md-10 col-sm-10 col-10">
                         <label for="prediction">Select a Prediction Label: {{prediction}}</label>

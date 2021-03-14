@@ -9,7 +9,7 @@
     <header>
         <div class="container">
             <h3>Birb Cam Label Revision</h3>
-            <form id="select" action="http://192.168.0.24:5000/revise" method="GET">
+            <form id="select" action="{{ request.base_url }}" method="GET">
                     Image date time:
                     <input type="text" name="dt_key" id="dt_key"/><br>
                 </p>
