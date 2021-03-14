@@ -32,8 +32,6 @@ logging.basicConfig(
 
 PROJECT_PATH = os.getenv("BIRBCAM_PATH", "../")
 DATA_DIR = os.getenv("DATA_DIR", os.path.join(PROJECT_PATH, "data/"))
-CAPTURE_MODE = os.getenv("CAPTURE_MODE", "")
-CAPTURE_DIR = os.getenv("CAPTURE_DIR", "/data")
 ROTATE_CAMERA = os.getenv("ROTATE_CAMERA", False)
 CUSTOM_TIMEZONE = os.getenv("CUSTOM_TIMEZONE",  tzlocal())
 BIRBCAM_LATITUDE = float(os.getenv("BIRBCAM_LATITUDE", "51.049999"))
@@ -59,7 +57,6 @@ save_dir = os.path.join(DATA_DIR, 'imgs/')
 
 # Make the save dir if it doesn't exist
 os.makedirs(save_dir, exist_ok=True)
-
 
 # Create the Videoapture object for the webcam
 capture = cv.VideoCapture()
