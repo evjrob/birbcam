@@ -12,10 +12,11 @@ from pyinaturalist.rest_api import get_access_token, create_observation, update_
 
 import os
 
-INAT_USERNAME = os.environ['INAT_USERNAME']
-INAT_PASSWORD = os.environ['INAT_PASSWORD']
-INAT_APP_ID = os.environ['INAT_APP_ID']
-INAT_APP_SECRET = os.environ['INAT_APP_SECRET']
+INAT_USERNAME = os.getenv('INAT_USERNAME', '')
+INAT_PASSWORD = os.getenv('INAT_PASSWORD', '')
+INAT_APP_ID = os.getenv('INAT_APP_ID', '')
+INAT_APP_SECRET = os.getenv('INAT_APP_SECRET', '')
+DB_PATH = os.getenv('DB_PATH', '../data/model_results.db')
 
 
 # Datetime format for printing and string representation
@@ -66,7 +67,7 @@ def inaturalist_api():
     if utc_key is None:
         return
     print(f'key: {utc_key}')
-    conn = sqlite3.connect('../../data/model_results.db', timeout=15)
+    conn = sqlite3.connect(DB_PATH, timeout=15)
     query = '''SELECT datetime, file_name, prediction, true_label, inaturalist_id
                FROM results 
                WHERE utc_datetime = ?
@@ -182,7 +183,7 @@ def model_evaluation_page():
         prediction = '%'
     print(prediction)
     # Fetch a single un-reviewed image from the database
-    conn = sqlite3.connect('../../data/model_results.db', timeout=15)
+    conn = sqlite3.connect(DB_PATH, timeout=15)
     query = '''SELECT utc_datetime, file_name, prediction, confidence
                FROM results 
                WHERE true_label IS NULL
@@ -242,7 +243,7 @@ def model_evaluation_page():
 # Route for data revision page
 @app.route('/revise', methods=['GET'])
 def label_revise_page():
-    conn = sqlite3.connect('../../data/model_results.db', timeout=15)
+    conn = sqlite3.connect(DB_PATH, timeout=15)
     c = conn.cursor()
     dt_key = request.args.get('dt_key', default=None)
     if dt_key is None:
@@ -303,7 +304,7 @@ def model_evaluation_api():
     label_str = ','.join(labels)
     print(f'key: {utc_key}, label: {label_str}')
     # Update the row in the database with the selected true label
-    conn = sqlite3.connect('../../data/model_results.db', timeout=15)
+    conn = sqlite3.connect(DB_PATH, timeout=15)
     c = conn.cursor()
     c.execute("UPDATE results SET true_label=? WHERE utc_datetime=?;", (label_str, utc_key))
     conn.commit()
@@ -319,7 +320,7 @@ def get_data():
     end_date = json_data['end_date']
     print(f'start date: {start_date}, end_date: {end_date}')
     # Fetch the selected data range from the database
-    conn = sqlite3.connect('../../data/model_results.db', timeout=15)
+    conn = sqlite3.connect(DB_PATH, timeout=15)
     c = conn.cursor()
     c.execute('''SELECT utc_datetime, datetime, file_name, prediction, confidence, true_label, inaturalist_id
                  FROM results 
