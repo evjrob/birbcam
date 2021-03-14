@@ -12,7 +12,6 @@ services:
       - ./data/:/data/
     devices:
       - /dev/video0:/dev/video0
-      - /dev/video1:/dev/video1
     command: python3 /usr/app/birbcam.py
     environment:
       - DB_PATH=/data/model.db
