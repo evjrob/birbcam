@@ -4,18 +4,25 @@ import datetime as dt
 import io
 import json
 import numpy as np
+import os
 from PIL import Image
 import sqlite3
 
 from flask import Flask, redirect, render_template, request, jsonify, send_file
 from pyinaturalist.rest_api import get_access_token, create_observation, update_observation, add_photo_to_observation
-from secrets import INAT_USERNAME, INAT_PASSWORD, INAT_APP_ID, INAT_APP_SECRET
+from inat_config import inat_latitude, inat_longitude, inat_positional_accuracy, inat_species_map
+
+
+# Get configuration from environment variables
+PROJECT_PATH = os.environ['BIRBCAM_PATH']
+INAT_ENABLED = os.environ['BIRBCAM_INAT_ENABLED']
+INAT_USERNAME = os.environ['BIRBCAM_INAT_USERNAME']
+INAT_PASSWORD = os.environ['BIRBCAM_INAT_PASSWORD']
+INAT_APP_ID = os.environ['BIRBCAM_INAT_APP_ID']
+INAT_APP_SECRET = os.environ['BIRBCAM_INAT_APP_SECRET']
 
 # Datetime format for printing and string representation
 dt_fmt = '%Y-%m-%dT%H:%M:%S'
-
-# Image directory
-img_dir = '../../imgs/'
 
 # Create flask app
 app = Flask(__name__)
@@ -47,7 +54,7 @@ def brighten_image(img, minimum_brightness=0.4):
 # Route for main visualization page
 @app.route('/')
 def main_visualization_page():
-    return render_template('index.html')
+    return render_template('index.html', inat_enabled=INAT_ENABLED)
 
 # Route for inaturalist api upload
 @app.route('/api/inaturalist', methods=['POST'])
@@ -59,7 +66,7 @@ def inaturalist_api():
     if utc_key is None:
         return
     print(f'key: {utc_key}')
-    conn = sqlite3.connect('../../data/model_results.db', timeout=15)
+    conn = sqlite3.connect(f'{PROJECT_PATH}/data/model_results.db', timeout=15)
     query = '''SELECT datetime, file_name, prediction, true_label, inaturalist_id
                FROM results 
                WHERE utc_datetime = ?
@@ -88,29 +95,7 @@ def inaturalist_api():
         app_secret=INAT_APP_SECRET,
     )
 
-    latitude = 51.03128580819969
-    longitude = -114.10264233236377
-    positional_accuracy = 3
-    obs_file_name = f'../../imgs/{img_fn}'
-
-    species_map = {
-        # Passer domesticus
-        'sparrow': {
-            'taxa_id': 13858,
-        },
-        # Poecile atricapillus
-        'chickadee': {
-            'taxa_id': 144815,
-        },
-        # Pica hudsonia
-        'magpie': {
-            'taxa_id': 143853,
-        },
-        # Sciurus carolinensis
-        'squirrel': {
-            'taxa_id': 46017,
-        }
-    }
+    obs_file_name = f'{PROJECT_PATH}/imgs/{img_fn}'
 
     # Upload the observation to iNaturalist
     if existing_inat_id is None:
@@ -130,14 +115,14 @@ def inaturalist_api():
         row = c.fetchone()
         if row is None or row[0] is None:
             response = create_observation(
-                taxon_id=species_map[obs_label]['taxa_id'],
+                taxon_id=inat_species_map[obs_label]['taxa_id'],
                 observed_on_string=obs_timestamp,
                 time_zone='Mountain Time (US & Canada)',
                 description='Birb Cam image upload: https://github.com/evjrob/birbcam',
                 tag_list=f'{obs_label}, Canada',
-                latitude=latitude,
-                longitude=longitude,
-                positional_accuracy=positional_accuracy, # meters,
+                latitude=inat_latitude,
+                longitude=inat_longitude,
+                positional_accuracy=inat_positional_accuracy, # meters,
                 access_token=token,
             )
             inat_observation_id = response[0]['id']
@@ -175,7 +160,7 @@ def model_evaluation_page():
         prediction = '%'
     print(prediction)
     # Fetch a single un-reviewed image from the database
-    conn = sqlite3.connect('../../data/model_results.db', timeout=15)
+    conn = sqlite3.connect(f'{PROJECT_PATH}/data/model_results.db', timeout=15)
     query = '''SELECT utc_datetime, file_name, prediction, confidence
                FROM results 
                WHERE true_label IS NULL
@@ -209,7 +194,7 @@ def model_evaluation_page():
         label_conf = f'{label_conf:{precision}}'
 
         # Read the image and histogram nomalize it
-        img = cv.imread(f'../../imgs/{img_fn}')
+        img = cv.imread(f'{PROJECT_PATH}/imgs/{img_fn}')
         if img is None:
             print(utc_key)
             print(img_fn)
@@ -235,7 +220,7 @@ def model_evaluation_page():
 # Route for data revision page
 @app.route('/revise', methods=['GET'])
 def label_revise_page():
-    conn = sqlite3.connect('../../data/model_results.db', timeout=15)
+    conn = sqlite3.connect(f'{PROJECT_PATH}/data/model_results.db', timeout=15)
     c = conn.cursor()
     dt_key = request.args.get('dt_key', default=None)
     if dt_key is None:
@@ -263,7 +248,7 @@ def label_revise_page():
         label = row[2]
 
         # Read the image and histogram nomalize it
-        img = cv.imread(f'../../imgs/{img_fn}')
+        img = cv.imread(f'{PROJECT_PATH}/imgs/{img_fn}')
         if img is None:
             print(utc_key)
             print(img_fn)
@@ -296,7 +281,7 @@ def model_evaluation_api():
     label_str = ','.join(labels)
     print(f'key: {utc_key}, label: {label_str}')
     # Update the row in the database with the selected true label
-    conn = sqlite3.connect('../../data/model_results.db', timeout=15)
+    conn = sqlite3.connect(f'{PROJECT_PATH}/data/model_results.db', timeout=15)
     c = conn.cursor()
     c.execute("UPDATE results SET true_label=? WHERE utc_datetime=?;", (label_str, utc_key))
     conn.commit()
@@ -312,7 +297,7 @@ def get_data():
     end_date = json_data['end_date']
     print(f'start date: {start_date}, end_date: {end_date}')
     # Fetch the selected data range from the database
-    conn = sqlite3.connect('../../data/model_results.db', timeout=15)
+    conn = sqlite3.connect(f'{PROJECT_PATH}/data/model_results.db', timeout=15)
     c = conn.cursor()
     c.execute('''SELECT utc_datetime, datetime, file_name, prediction, confidence, true_label, inaturalist_id
                  FROM results 
@@ -356,7 +341,7 @@ def get_data():
 
 @app.route('/api/serve_image/<string:img_fn>')
 def serve_image(img_fn):
-    img = cv.imread(f'../../imgs/{img_fn}')
+    img = cv.imread(f'{PROJECT_PATH}/imgs/{img_fn}')
     img = brighten_image(img)
     #img = histogram_equalize(img)
     img = Image.fromarray(img.astype('uint8'))
