@@ -21,6 +21,7 @@ services:
     # runtime: "nvidia"
     env_file:
       - settings.env
+    restart: always
 
   webapp:
     build:
@@ -43,3 +44,4 @@ services:
       - BIRBCAM_PATH=/app
       - DATA_DIR=/data
     # runtime: "nvidia"
+    restart: always
