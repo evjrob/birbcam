@@ -10,16 +10,18 @@ import sqlite3
 
 from flask import Flask, redirect, render_template, request, jsonify, send_file
 from pyinaturalist.rest_api import get_access_token, create_observation, update_observation, add_photo_to_observation
-from inat_config import inat_latitude, inat_longitude, inat_positional_accuracy, inat_species_map
 
+import os
+from .inat_config import inat_latitude, inat_longitude, inat_positional_accuracy, inat_species_map
 
-# Get configuration from environment variables
-PROJECT_PATH = os.environ['BIRBCAM_PATH']
-INAT_ENABLED = os.environ['BIRBCAM_INAT_ENABLED']
-INAT_USERNAME = os.environ['BIRBCAM_INAT_USERNAME']
-INAT_PASSWORD = os.environ['BIRBCAM_INAT_PASSWORD']
-INAT_APP_ID = os.environ['BIRBCAM_INAT_APP_ID']
-INAT_APP_SECRET = os.environ['BIRBCAM_INAT_APP_SECRET']
+PROJECT_PATH = os.getenv("BIRBCAM_PATH", "../")
+DATA_DIR = os.getenv("DATA_DIR", os.path.join(PROJECT_PATH, "data/"))
+INAT_ENABLED = bool(os.getenv('BIRBCAM_INAT_ENABLED', 'False'))
+INAT_USERNAME = os.getenv('INAT_USERNAME', '')
+INAT_PASSWORD = os.getenv('INAT_PASSWORD', '')
+INAT_APP_ID = os.getenv('INAT_APP_ID', '')
+INAT_APP_SECRET = os.getenv('INAT_APP_SECRET', '')
+DB_PATH = os.getenv('DB_PATH', '../data/model_results.db')
 
 # Datetime format for printing and string representation
 dt_fmt = '%Y-%m-%dT%H:%M:%S'
@@ -29,6 +31,7 @@ app = Flask(__name__)
 app.jinja_env.auto_reload = True
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
+os.makedirs(os.path.join("DATA_DIR", "imgs"), exist_ok=True)
 
 def histogram_equalize(img):
     img_y_cr_cb = cv.cvtColor(img, cv.COLOR_BGR2YCrCb)
@@ -66,7 +69,7 @@ def inaturalist_api():
     if utc_key is None:
         return
     print(f'key: {utc_key}')
-    conn = sqlite3.connect(f'{PROJECT_PATH}/data/model_results.db', timeout=15)
+    conn = sqlite3.connect(DB_PATH, timeout=15)
     query = '''SELECT datetime, file_name, prediction, true_label, inaturalist_id
                FROM results 
                WHERE utc_datetime = ?
@@ -95,7 +98,7 @@ def inaturalist_api():
         app_secret=INAT_APP_SECRET,
     )
 
-    obs_file_name = f'{PROJECT_PATH}/imgs/{img_fn}'
+    obs_file_name = f'{DATA_DIR}/imgs/{img_fn}'
 
     # Upload the observation to iNaturalist
     if existing_inat_id is None:
@@ -160,7 +163,7 @@ def model_evaluation_page():
         prediction = '%'
     print(prediction)
     # Fetch a single un-reviewed image from the database
-    conn = sqlite3.connect(f'{PROJECT_PATH}/data/model_results.db', timeout=15)
+    conn = sqlite3.connect(DB_PATH, timeout=15)
     query = '''SELECT utc_datetime, file_name, prediction, confidence
                FROM results 
                WHERE true_label IS NULL
@@ -194,7 +197,7 @@ def model_evaluation_page():
         label_conf = f'{label_conf:{precision}}'
 
         # Read the image and histogram nomalize it
-        img = cv.imread(f'{PROJECT_PATH}/imgs/{img_fn}')
+        img = cv.imread(f'{DATA_DIR}/imgs/{img_fn}')
         if img is None:
             print(utc_key)
             print(img_fn)
@@ -220,7 +223,7 @@ def model_evaluation_page():
 # Route for data revision page
 @app.route('/revise', methods=['GET'])
 def label_revise_page():
-    conn = sqlite3.connect(f'{PROJECT_PATH}/data/model_results.db', timeout=15)
+    conn = sqlite3.connect(DB_PATH, timeout=15)
     c = conn.cursor()
     dt_key = request.args.get('dt_key', default=None)
     if dt_key is None:
@@ -248,7 +251,7 @@ def label_revise_page():
         label = row[2]
 
         # Read the image and histogram nomalize it
-        img = cv.imread(f'{PROJECT_PATH}/imgs/{img_fn}')
+        img = cv.imread(f'{DATA_DIR}/imgs/{img_fn}')
         if img is None:
             print(utc_key)
             print(img_fn)
@@ -281,7 +284,7 @@ def model_evaluation_api():
     label_str = ','.join(labels)
     print(f'key: {utc_key}, label: {label_str}')
     # Update the row in the database with the selected true label
-    conn = sqlite3.connect(f'{PROJECT_PATH}/data/model_results.db', timeout=15)
+    conn = sqlite3.connect(DB_PATH, timeout=15)
     c = conn.cursor()
     c.execute("UPDATE results SET true_label=? WHERE utc_datetime=?;", (label_str, utc_key))
     conn.commit()
@@ -297,7 +300,7 @@ def get_data():
     end_date = json_data['end_date']
     print(f'start date: {start_date}, end_date: {end_date}')
     # Fetch the selected data range from the database
-    conn = sqlite3.connect(f'{PROJECT_PATH}/data/model_results.db', timeout=15)
+    conn = sqlite3.connect(DB_PATH, timeout=15)
     c = conn.cursor()
     c.execute('''SELECT utc_datetime, datetime, file_name, prediction, confidence, true_label, inaturalist_id
                  FROM results 
@@ -341,7 +344,7 @@ def get_data():
 
 @app.route('/api/serve_image/<string:img_fn>')
 def serve_image(img_fn):
-    img = cv.imread(f'{PROJECT_PATH}/imgs/{img_fn}')
+    img = cv.imread(f'{DATA_DIR}/imgs/{img_fn}')
     img = brighten_image(img)
     #img = histogram_equalize(img)
     img = Image.fromarray(img.astype('uint8'))
@@ -352,3 +355,7 @@ def serve_image(img_fn):
     # move to beginning of file so `send_file()` it will read from start    
     file_object.seek(0)
     return send_file(file_object, mimetype='image/PNG')
+
+if __name__ == "__main__":
+    # Only for debugging while developing
+    app.run(host='0.0.0.0', debug=True, port=80)

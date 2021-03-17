@@ -20,7 +20,6 @@ models/*
 notebooks/.ipynb_checkpoints/*
 
 # Data
-data/model_results.db
 camera-app/tests/test_assets/*
 
 # Secrets

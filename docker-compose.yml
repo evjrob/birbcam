@@ -1,0 +1,47 @@
+---
+version: '3.7'
+services:
+  camera:
+    build: 
+      context: ./camera-app
+    image: birbcam/camera
+    init: true
+    volumes:
+      - ./camera-app/:/usr/app/
+      - /opt/vc:/opt/vc
+      - ./data/:/data/
+    devices:
+      - /dev/video0:/dev/video0
+    command: python3 /usr/app/birbcam.py
+    environment:
+      - DB_PATH=/data/model.db
+      - MODEL_PATH=/data/birbcam_prod.pkl
+      - BIRBCAM_PATH=/usr/app
+      - DATA_DIR=/data
+    # runtime: "nvidia"
+    env_file:
+      - settings.env
+    restart: always
+
+  webapp:
+    build:
+      context: ./webapp
+    image: birbcam/webapp
+    init: true
+    command: flask run --host=0.0.0.0
+    working_dir: /app
+    volumes:
+      - ./webapp/birbcam-app:/app
+      - ./data/:/data/
+    ports:
+      - "8080:5000"
+    env_file:
+      - settings.env
+    environment:
+      - DB_PATH=/data/model.db
+      - FLASK_APP=app.py
+      - MODEL_PATH=/data/birbcam_prod.pkl
+      - BIRBCAM_PATH=/app
+      - DATA_DIR=/data
+    # runtime: "nvidia"
+    restart: always
