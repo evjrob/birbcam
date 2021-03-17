@@ -46,7 +46,10 @@ DB_PATH = os.getenv('DB_PATH', '../data/model_results.db')
 MODEL_PATH = os.getenv('MODEL_PATH', '../models/birbcam_prod.pkl')
 
 # Timezone for python datetime objects
-tz = CUSTOM_TIMEZONE
+if isinstance(CUSTOM_TIMEZONE, str):
+    tz = pytz.timezone(CUSTOM_TIMEZONE)
+else:
+    tz = CUSTOM_TIMEZONE
 utc_tz = pytz.timezone('UTC')
 
 # Datetime format for printing and string representation
