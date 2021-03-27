@@ -1,0 +1,18 @@
+{
+    "sparrow": {
+        "species": "Passer domesticus",
+        "taxa_id": 13858
+    },
+    "chickadee": {
+        "species": "Poecile atricapillus",
+        "taxa_id": 144815
+    },
+    "magpie": {
+        "species": "Pica hudsonia",
+        "taxa_id": 143853
+    },
+    "squirrel": {
+        "species": "Sciurus carolinensis",
+        "taxa_id": 46017
+    }
+}

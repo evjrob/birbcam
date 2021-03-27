@@ -12,8 +12,8 @@ from flask import Flask, redirect, render_template, request, jsonify, send_file
 from pyinaturalist.rest_api import get_access_token, create_observation, update_observation, add_photo_to_observation
 
 import os
-from .inat_config import inat_latitude, inat_longitude, inat_positional_accuracy, inat_species_map
 
+# Environment variables for configuration
 PROJECT_PATH = os.getenv("BIRBCAM_PATH", "../")
 DATA_DIR = os.getenv("DATA_DIR", os.path.join(PROJECT_PATH, "data/"))
 INAT_ENABLED = bool(os.getenv('BIRBCAM_INAT_ENABLED', 'False'))
@@ -21,7 +21,14 @@ INAT_USERNAME = os.getenv('INAT_USERNAME', '')
 INAT_PASSWORD = os.getenv('INAT_PASSWORD', '')
 INAT_APP_ID = os.getenv('INAT_APP_ID', '')
 INAT_APP_SECRET = os.getenv('INAT_APP_SECRET', '')
+INAT_LATITUDE = float(os.getenv("BIRBCAM_LATITUDE", "51.03128580819969"))
+INAT_LONGITUDE = float(os.getenv("BIRBCAM_LONGITUDE", "-114.10264233236377"))
+INAT_POSITIONAL_ACCURACY = float(os.getenv("INAT_POSITIONAL_ACCURACY", "3"))
 DB_PATH = os.getenv('DB_PATH', '../data/model_results.db')
+
+# Load species map from file
+species_map = json.load(open(f'{DATA_DIR}/species_map.json'))
+label_options = list(species_map.keys())
 
 # Datetime format for printing and string representation
 dt_fmt = '%Y-%m-%dT%H:%M:%S'
@@ -118,14 +125,14 @@ def inaturalist_api():
         row = c.fetchone()
         if row is None or row[0] is None:
             response = create_observation(
-                taxon_id=inat_species_map[obs_label]['taxa_id'],
+                taxon_id=species_map[obs_label]['taxa_id'],
                 observed_on_string=obs_timestamp,
                 time_zone='Mountain Time (US & Canada)',
                 description='Birb Cam image upload: https://github.com/evjrob/birbcam',
                 tag_list=f'{obs_label}, Canada',
-                latitude=inat_latitude,
-                longitude=inat_longitude,
-                positional_accuracy=inat_positional_accuracy, # meters,
+                latitude=INAT_LATITUDE,
+                longitude=INAT_LONGITUDE,
+                positional_accuracy=INAT_POSITIONAL_ACCURACY, # meters,
                 access_token=token,
             )
             inat_observation_id = response[0]['id']
@@ -216,9 +223,9 @@ def model_evaluation_page():
         label = None
         label_conf = None
         utc_key = None
-    return render_template('evaluate.html', prediction=prediction, confidence=confidence, 
-                           progress=progress, show_eval=show_eval, filename=img_fn, 
-                           img=img_b64, label=label, label_conf=label_conf, utc_key=utc_key)
+    return render_template('evaluate.html', label_options=label_options, prediction=prediction, 
+        confidence=confidence, progress=progress, show_eval=show_eval, filename=img_fn, 
+        img=img_b64, label=label, label_conf=label_conf, utc_key=utc_key)
 
 # Route for data revision page
 @app.route('/revise', methods=['GET'])
@@ -268,8 +275,8 @@ def label_revise_page():
         img_b64 = None
         label = None
         utc_key = None
-    return render_template('revise.html', filename=img_fn, img=img_b64, 
-                           label=label, utc_key=utc_key)
+    return render_template('revise.html', label_options=label_options, filename=img_fn,
+        img=img_b64, label=label, utc_key=utc_key)
 
 # Route for model evaluation page
 @app.route('/api/model_eval_submit', methods=['POST'])

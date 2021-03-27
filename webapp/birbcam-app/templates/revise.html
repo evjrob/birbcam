@@ -38,10 +38,9 @@
                     Please select the correct label:
                 </p>
                 <p>
-                    <input type="checkbox" name="label" id="sparrow" value="sparrow"> sparrow </input><br>
-                    <input type="checkbox" name="label" id="chickadee" value="chickadee"> chickadee </input><br>
-                    <input type="checkbox" name="label" id="magpie" value="magpie"> magpie </input><br>
-                    <input type="checkbox" name="label" id="squirrel" value="squirrel"> squirrel </input><br>
+                    {% for l in label_options %}
+                    <input type="checkbox" name="label" id="{{l}}" value="{{l}}"> {{l}} </input><br>
+                    {% endfor %}
                     <input type="checkbox" name="label" id="other" value="other"> other: </input>
                     <input type="text" name="othertext" id="othertext"/><br>
                 </p>
