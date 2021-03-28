@@ -18,7 +18,7 @@ services:
       - MODEL_PATH=/data/birbcam_prod.pkl
       - BIRBCAM_PATH=/usr/app
       - DATA_DIR=/data
-    # runtime: "nvidia"
+    runtime: "nvidia"
     env_file:
       - settings.env
     restart: always
@@ -43,5 +43,5 @@ services:
       - MODEL_PATH=/data/birbcam_prod.pkl
       - BIRBCAM_PATH=/app
       - DATA_DIR=/data
-    # runtime: "nvidia"
+    runtime: "nvidia"
     restart: always
