@@ -26,7 +26,7 @@ A Raspberry Pi project designed to detect animals visiting my balcony with a web
 
 4. Update data/species_map.json to have the species names and details for your Birb Cam. If you wish to use iNaturalist you will need to provide taxa_id for each species.
 
-5. Build the Docker image by running docker-compose build --parallel in the root of the project. Alternatively, you may pull pre-built images from DockerHub (https://hub.docker.com/orgs/birbcam/repositories). I don't guarantee these images will work, but they may save you some build time.
+5. Build the Docker image by running ```docker-compose build --parallel``` in the root of the project. Alternatively, you may pull pre-built images from DockerHub (https://hub.docker.com/orgs/birbcam/repositories). I don't guarantee these images will work, but they may save you some build time.
 
 6. Setup your database by running:
 
