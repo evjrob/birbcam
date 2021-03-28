@@ -321,6 +321,8 @@ def get_data():
     result_dict = {l:[] for l in labels}
     for event in rows:
         utc_dt, dt, fn, pred, conf, true_label, inat_id = event
+        if true_label not in result_dict.keys():
+            result_dict[true_label] = []
         if true_label is not None:
             true_labels = true_label.split(',')
             for tl in true_labels:
