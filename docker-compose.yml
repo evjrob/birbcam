@@ -12,7 +12,8 @@ services:
       - ./data/:/data/
     devices:
       - /dev/video0:/dev/video0
-    command: python3 /usr/app/birbcam.py
+    command: python3 birbcam.py
+    working_dir: /usr/app/
     environment:
       - DB_PATH=/data/model.db
       - MODEL_PATH=/data/birbcam_prod.pkl

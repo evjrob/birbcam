@@ -11,6 +11,9 @@ help:
 up:
 	docker-compose up
 
+down:
+	docker-compose down
+
 start:
 	docker-compose up --detach
 
@@ -19,6 +22,9 @@ build:
 
 push:
 	docker-compose push
+
+test:
+	docker-compose run camera pytest
 
 create_db:
 	docker-compose run webapp python3 util.py create_db
