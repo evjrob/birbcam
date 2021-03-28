@@ -17,6 +17,9 @@ start:
 build:
 	docker-compose build --parallel
 
+push:
+	docker-compose push
+
 create_db:
 	docker-compose run webapp python3 util.py create_db
 
