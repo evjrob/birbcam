@@ -28,7 +28,26 @@ DB_PATH = os.getenv('DB_PATH', '../data/model_results.db')
 
 # Load species map from file
 species_map = json.load(open(f'{DATA_DIR}/species_map.json'))
-label_options = list(species_map.keys())
+# label_options = list(species_map.keys())
+
+def get_labels():
+    conn = sqlite3.connect(DB_PATH, timeout=15)
+    c = conn.cursor()
+    c.execute('''SELECT DISTINCT true_label
+                    FROM results ;''')
+    label_rows = c.fetchall()
+    conn.close()
+    label_options = list()
+    for label_row in label_rows:
+        label = label_row[0]
+        if ',' in label:
+            label_options += label.split(',')
+        else:
+            label_options.append(label)
+    conn.close()
+    return set(label_options)
+
+
 
 # Datetime format for printing and string representation
 dt_fmt = '%Y-%m-%dT%H:%M:%S'
@@ -160,6 +179,7 @@ def inaturalist_api():
 # Route for model evaluation page
 @app.route('/eval', methods=['GET'])
 def model_evaluation_page():
+    get_labels()
     confidence = request.args.get('confidence', default=None)
     if confidence is None:
         confidence = 0.95
@@ -223,7 +243,7 @@ def model_evaluation_page():
         label = None
         label_conf = None
         utc_key = None
-    return render_template('evaluate.html', label_options=label_options, prediction=prediction, 
+    return render_template('evaluate.html', label_options=get_labels(), prediction=prediction, 
         confidence=confidence, progress=progress, show_eval=show_eval, filename=img_fn, 
         img=img_b64, label=label, label_conf=label_conf, utc_key=utc_key)
 
@@ -275,7 +295,7 @@ def label_revise_page():
         img_b64 = None
         label = None
         utc_key = None
-    return render_template('revise.html', label_options=label_options, filename=img_fn,
+    return render_template('revise.html', label_options=get_labels(), filename=img_fn,
         img=img_b64, label=label, utc_key=utc_key)
 
 # Route for model evaluation page
@@ -301,7 +321,7 @@ def model_evaluation_api():
 # Route for data loading API
 @app.route('/api/data', methods=['POST'])
 def get_data():
-    labels = ['chickadee', 'magpie', 'sparrow', 'squirrel']
+    labels = get_labels()
     json_data = request.get_json(force=True)
     start_date = json_data['start_date']
     end_date = json_data['end_date']
@@ -321,8 +341,6 @@ def get_data():
     result_dict = {l:[] for l in labels}
     for event in rows:
         utc_dt, dt, fn, pred, conf, true_label, inat_id = event
-        if true_label not in result_dict.keys():
-            result_dict[true_label] = []
         if true_label is not None:
             true_labels = true_label.split(',')
             for tl in true_labels:
