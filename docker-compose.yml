@@ -10,6 +10,7 @@ services:
       - ./camera-app/:/usr/app/
       - /opt/vc:/opt/vc
       - ./data/:/data/
+      - ./notebooks/:/usr/app/notebooks/
     devices:
       - /dev/video0:/dev/video0
     command: python3 birbcam.py
@@ -19,7 +20,7 @@ services:
       - MODEL_PATH=/data/birbcam_prod.pkl
       - BIRBCAM_PATH=/usr/app
       - DATA_DIR=/data
-    runtime: "nvidia"
+    # runtime: "nvidia"
     env_file:
       - settings.env
     restart: always
@@ -44,5 +45,5 @@ services:
       - MODEL_PATH=/data/birbcam_prod.pkl
       - BIRBCAM_PATH=/app
       - DATA_DIR=/data
-    runtime: "nvidia"
+    # runtime: "nvidia"
     restart: always
