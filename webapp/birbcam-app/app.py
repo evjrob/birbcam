@@ -33,8 +33,13 @@ species_map = json.load(open(f'{DATA_DIR}/species_map.json'))
 def get_labels():
     conn = sqlite3.connect(DB_PATH, timeout=15)
     c = conn.cursor()
-    c.execute('''SELECT DISTINCT true_label
-                    FROM results ;''')
+    c.execute(
+        '''
+        SELECT DISTINCT true_label
+        FROM results WHERE true_label IS NOT NULL
+        AND true_label != "none";
+        '''
+    )
     label_rows = c.fetchall()
     conn.close()
     label_options = list()
