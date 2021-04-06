@@ -47,8 +47,8 @@ jobs:
           arch: ${{ matrix.arch }}
           distro: ${{ matrix.distro }}
           run: |
-            make build
-            make push
+            docker-compose build
+            docker-compose push
 
 
   test:
