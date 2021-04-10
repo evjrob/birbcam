@@ -38,6 +38,8 @@ BIRBCAM_LATITUDE = float(os.getenv("BIRBCAM_LATITUDE", "51.049999"))
 BIRBCAM_LONGITUDE = float(os.getenv("BIRBCAM_LONGITUDE", "-114.066666"))
 LOCATION_NAME = os.getenv("LOCATION", "Calgary")
 REGION_NAME = os.getenv("REGION_NAME", "Canada")
+MIN_CORRECT_CONF = os.getenv("MIN_CORRECT_CONF", 0.75)
+MIN_UNREVIEWED_CONF = os.getenv("MIN_UNREVIEWED_CONF", 0.9)
 
 # Database path
 DB_PATH = os.getenv('DB_PATH', '../data/model_results.db')
@@ -115,10 +117,10 @@ def prediction_cleanup():
     c.execute('''SELECT * FROM results 
         WHERE (true_label = "none" 
         AND prediction = "none" 
-        AND confidence >= 0.75);''')
+        AND confidence >= ?);''', (MIN_CORRECT_CONF,))
     rows = c.fetchall()
     l = len(rows)
-    logging.info(f'Removing {l} rows with true label of "none" and confidence >= 0.75')
+    logging.info(f'Removing {l} rows with true label of "none" and confidence >= {MIN_CORRECT_CONF}')
     for i, row in enumerate(rows):
         utc_datetime, datetime, file_name, prediction, confidence, label, _ = row
         if os.path.exists(f'{save_dir}{file_name}'):
@@ -130,11 +132,11 @@ def prediction_cleanup():
     c.execute('''SELECT * FROM results 
         WHERE true_label IS NULL 
         AND prediction= "none" 
-        AND confidence > 0.95 
-        AND datetime <= ?;''', (date_thresh,))
+        AND confidence > ?
+        AND datetime <= ?;''', (MIN_UNREVIEWED_CONF, date_thresh,))
     rows = c.fetchall()
     l = len(rows)
-    logging.info(f'Removing {l} rows with predicted label of "none" and confidence > 0.95')
+    logging.info(f'Removing {l} rows with predicted label of "none" and confidence > {MIN_UNREVIEWED_CONF}')
     for i, row in enumerate(rows):
         utc_datetime, datetime, file_name, prediction, confidence, label, _ = row
         if os.path.exists(f'{save_dir}{file_name}'):
