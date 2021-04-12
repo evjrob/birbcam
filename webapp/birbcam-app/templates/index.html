@@ -95,7 +95,7 @@
         };
 
         var updateChartData = (start_date, end_date) => {
-            d3.json('/api/data', {
+            d3.json('/api/eventdropsdata', {
                 method:"post",
                 body: JSON.stringify({
                     start_date: dbDate(start_date),

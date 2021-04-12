@@ -66,6 +66,11 @@ def brighten_image(img, minimum_brightness=0.4):
 def main_visualization_page():
     return render_template('index.html', inat_enabled=INAT_ENABLED)
 
+# Route for diurnal visualization page
+@app.route('/diurnal')
+def diurnal_visualization_page():
+    return render_template('diurnal.html', label_options=label_options)
+
 # Route for inaturalist api upload
 @app.route('/api/inaturalist', methods=['POST'])
 def inaturalist_api():
@@ -299,8 +304,8 @@ def model_evaluation_api():
     return redirect(request.referrer)
 
 # Route for data loading API
-@app.route('/api/data', methods=['POST'])
-def get_data():
+@app.route('/api/eventdropsdata', methods=['POST'])
+def get_events_data():
     labels = ['chickadee', 'magpie', 'sparrow', 'squirrel']
     json_data = request.get_json(force=True)
     start_date = json_data['start_date']
@@ -346,6 +351,30 @@ def get_data():
     results = []
     for k, v in result_dict.items():
         results.append({'name': k, 'data':v})
+    return jsonify(results)
+
+
+# Route for data loading API
+@app.route('/api/diurnaldata', methods=['POST'])
+def get_diurnal_data():
+    json_data = request.get_json(force=True)
+    start_date = json_data['start_date']
+    end_date = json_data['end_date']
+    species = json_data['species']
+    print(f'start date: {start_date}, end_date: {end_date}, species: {species}')
+    # Fetch the selected data range from the database
+    conn = sqlite3.connect(DB_PATH, timeout=15)
+    c = conn.cursor()
+    c.execute('''SELECT date(datetime) AS date, strftime("%H", datetime) AS hour, COUNT(*) AS n 
+                 FROM results 
+                 WHERE (true_label = :species OR (true_label IS NULL AND prediction = :species)) 
+                 AND datetime >= :start_date
+                 AND datetime <= :end_date
+                 GROUP BY strftime("%Y-%m-%dT%H", datetime) 
+                 ORDER BY strftime("%Y-%m-%dT%H", datetime);''', 
+                 {'species':species, 'start_date':start_date, 'end_date':end_date})
+    rows = c.fetchall()
+    results = [{'date':r[0], 'hour':r[1]+':00', 'count':r[2]} for r in rows]
     return jsonify(results)
 
 

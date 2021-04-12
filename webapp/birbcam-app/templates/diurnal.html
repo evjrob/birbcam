@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block content %}
+{% set active_page = "diurnal" %}
+{% include "header.html" %}
+
+<div class="container">
+    <link href="https://fonts.googleapis.com/css?family=Josefin+Sans:300" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Muli" rel="stylesheet">
+    <h3>Birb Cam Diurnal Patterns</h3>
+    <h4>Filters:</h4>
+    <form id="filter" action="{{ request.base_url }}" method="GET">
+        <div class="row">
+            <div class=" col-lg-6 col-md-10 col-sm-10 col-10">
+                <label for="species">Select a Species: {{species}}</label>
+                <br>
+                <select name="species" id="species">
+                {% for l in label_options %}
+                <option>{{l}}</option>
+                {% endfor %}
+                </select>
+            </div>
+            <!-- <div class=" col-lg-6 col-md-10 col-sm-10 col-10">
+                <label for="confrange">Date Range: {{start_date}} to {{end_date}}</label>
+                <input id="lightpicker" name="litepicker"/>
+            </div> -->
+        </div>
+        <div class="row">
+            <br/>
+        </div>
+        <div class="row top-padded">
+            <div class="col-6 col-sm-6">
+                <input type="submit" class="submit" value="Submit"/>
+            </div>
+        </div>
+    </form>
+    <div class="row">
+        <div id="chart" class="col-12"></div>
+    </div>
+
+    <footer class="row">
+        <p class="col-12">
+            No birbs or other critters were harmed in the making of Birb Cam.
+        </p>
+    </footer>
+    <script src="https://unpkg.com/d3@4.13.0/build/d3.min.js"></script>
+    <script src="https://unpkg.com/d3-fetch"></script>
+    <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
+    <script >
+        var global = global || window;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        var species = urlParams.get('species');
+        if (species == null) { species = "sparrow" };
+        console.log(species)
+        
+        // new Litepicker({
+        //     element: document.getElementById('datepicker'),
+        //     singleMode: false,
+        //     tooltipText: {
+        //         one: 'night',
+        //         other: 'nights'
+        //     },
+        //     tooltipNumber: (totalDays) => {
+        //         return totalDays - 1;
+        //     }
+        // });
+
+        function addDays(date, days) {
+            const copy = new Date(Number(date))
+            copy.setDate(date.getDate() + days)
+            return copy
+        };
+
+        const simpleDate = (date) => {
+            d = `${date.getFullYear()}-${appendLeadingZeroes(date.getMonth() + 1)}-${appendLeadingZeroes(date.getDate())}`
+            return d;
+        };
+
+        function getDateArray(startDateStr, stopDateStr) {
+            var dateArray = new Array();
+            var currentDate = new Date(startDateStr);
+            var stopDate = new Date(stopDateStr);
+            while (currentDate <= stopDate) {
+                dateArray.push(simpleDate(new Date(currentDate)));
+                currentDate = addDays(currentDate,1);
+            }
+            return dateArray;
+        }
+
+        var endDate = addDays(new Date(), 1);
+        var startDate = new Date('2020-11-29');
+        // var species = "sparrow";
+
+        const colorMap = {
+            "chickadee": ["#ffce99", "#FF7F00"], 
+            "magpie": ["#aec6ea", "#3166B6"], 
+            "sparrow": ["#f6a8a2", "#E2000B"], 
+            "squirrel": ["#99ffb1", "#00B028"]
+        }
+
+        const appendLeadingZeroes = (n) => {
+            if(n <= 9){
+                return "0" + n;
+            }
+            return n
+        };
+
+        const dbDate = (date) => {
+            d = `${date.getFullYear()}-${appendLeadingZeroes(date.getMonth() + 1)}-${appendLeadingZeroes(date.getDate())}T${appendLeadingZeroes(date.getHours())}:${appendLeadingZeroes(date.getMinutes())}:${appendLeadingZeroes(date.getSeconds())}`
+            return d;
+        };
+
+        var axisDates = getDateArray(startDate, endDate);
+        const dateEvery = 7;
+        var minHour = 4;
+        var maxHour = 22;
+        var axisHours = Array.from(Array(24).keys()).filter(d=>(d>=minHour&d<=maxHour)).map(h => appendLeadingZeroes(h)+":00");
+
+        var updateChartData = (startDate, endDate) => {
+            d3.json('/api/diurnaldata', {
+                method:"post",
+                body: JSON.stringify({
+                    start_date: dbDate(startDate),
+                    end_date: dbDate(endDate),
+                    species: species
+                })
+            })
+            .then(function(json) {
+                var birbsData = json;
+                chart(birbsData);
+            });
+        };
+
+        const tooltip = d3
+            .select('body')
+            .append('div')
+            .classed('tooltip col-4 col-lg-2 col-md-4 col-sm-6', true)
+            .style('opacity', 0)
+            .style('pointer-events', 'auto')
+        
+        const fillData = (data, dates, hours) => {
+            combos = dates.flatMap(d => hours.map(v => d+','+v));
+            existingCombos = data.map(d => d['date']+','+d['hour']);
+            missingCombos = combos.filter(x => !existingCombos.includes(x));
+            missingCombos.forEach(d => {
+                dComponents = d.split(',')
+                data.push({"date":dComponents[0], "hour":dComponents[1], "count": 0});
+            });
+            return data
+        };
+            
+        var chart = function(data){
+            data = fillData(data, axisDates, axisHours);
+
+            var min_width = 350;
+            var parent_div = d3.select("#chart");
+            var div_width = Math.max(min_width, parseInt(parent_div.style("width")));
+
+
+            var margin = {top: 10, right: 30, bottom: 80, left: 50},
+                width = div_width - margin.left - margin.right,
+                height = 400 - margin.top - margin.bottom,
+                rectMargin = 1,
+                rectCornerRadius = 3;
+
+            var baseColor = "#f0f2f5";
+            var speciesColor = colorMap[species];
+
+            var parseDate = d3.timeFormat("%Y-%m-%d").parse,
+                formatDate = d3.timeFormat("%b %d");
+
+            var x = d3.scaleBand().range([0, width]),
+                y = d3.scaleBand().range([0, height]),
+                z = d3.scaleSqrt().range([baseColor, speciesColor[0], speciesColor[1]]);
+
+            var xStep = width / axisDates.length;
+            var yStep = height / 24;
+
+            x.domain(axisDates);
+            y.domain(axisHours);
+            z.domain([0, 1, d3.max(data, function(d) { return d.count; })]);
+
+            var svg = d3.select("#chart").append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            svg.selectAll(".tile")
+                .data(data)
+              .enter().append("rect")
+                .attr("class", "tile")
+                .attr("x", function(d) { 
+                    return x(d.date) + rectMargin; })
+                .attr("y", function(d) { 
+                    return y(d.hour) + rectMargin; })
+                .attr("rx", rectCornerRadius)
+                .attr("ry", rectCornerRadius)
+                .attr("width", xStep-2*rectMargin)
+                .attr("height", yStep-2*rectMargin)
+                .style("fill", function(d) { return z(d.count); })
+                .attr('stroke', '#dee0e4')
+                .attr('stroke-width', '1')
+                .append("title")
+                .text(function(d){return `${d.date} ${d.hour} : ${d.count} ${species} images captured`});
+
+            // Add the x Axis
+            svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x).tickValues(axisDates.filter(function(d,i){ return !(i%dateEvery)})))
+                // .tickValues(axisDates.filter(function(d,i){ return !(i%maxXTicks)}))
+              .selectAll("text")
+                .attr("y", 0)
+                .attr("x", 9)
+                .attr("dy", ".35em")
+                .attr("transform", "rotate(270)translate("+-margin.bottom+",0)")
+                .style("text-anchor", "start");
+
+            // Add the y Axis
+            svg.append("g")
+                .attr("transform", "translate(0,0)")
+                .call(d3.axisLeft(y))
+              .selectAll("text")
+                .attr("y", 0)
+                .attr("x", 9)
+                .attr("dy", ".35em")
+                .attr("transform", "translate("+-margin.left+",0)")
+                .style("text-anchor", "start");
+
+
+        };
+    
+        updateChartData(startDate, endDate);
+    </script>
+</div>
+
+{% endblock %}
