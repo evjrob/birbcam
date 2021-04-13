@@ -199,8 +199,6 @@
                 .attr("width", xStep-2*rectMargin)
                 .attr("height", yStep-2*rectMargin)
                 .style("fill", function(d) { return z(d.count); })
-                .attr('stroke', '#dee0e4')
-                .attr('stroke-width', '1')
                 .append("title")
                 .text(function(d){return `${d.date} ${d.hour} : ${d.count} ${species} images captured`});
 
