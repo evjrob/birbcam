@@ -174,7 +174,7 @@
                 z = d3.scaleSqrt().range([baseColor, speciesColor[0], speciesColor[1]]);
 
             var xStep = width / axisDates.length;
-            var yStep = height / 24;
+            var yStep = height / axisHours.length;
 
             x.domain(axisDates);
             y.domain(axisHours);
