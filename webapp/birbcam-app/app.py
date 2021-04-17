@@ -303,6 +303,10 @@ def label_revise_page():
     return render_template('revise.html', label_options=get_labels(), filename=img_fn,
         img=img_b64, label=label, utc_key=utc_key)
 
+@app.route('/stream', methods=['GET'])
+def stream():
+    return render_template('stream.html')
+
 # Route for model evaluation page
 @app.route('/api/model_eval_submit', methods=['POST'])
 def model_evaluation_api():

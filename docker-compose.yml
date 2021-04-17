@@ -35,8 +35,6 @@ services:
     volumes:
       - ./webapp/birbcam-app:/app
       - ./data/:/data/
-    ports:
-      - "8080:5000"
     env_file:
       - settings.env
     environment:
@@ -47,3 +45,12 @@ services:
       - DATA_DIR=/data
     # runtime: "nvidia"
     restart: always
+
+  proxy:
+    image: nginx:stable
+    init: true
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./proxy/logs/:/var/log/nginx/

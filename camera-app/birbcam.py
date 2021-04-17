@@ -18,6 +18,8 @@ import sqlite3
 import time
 import traceback
 from fastai.vision.all import *
+from flask_opencv_streamer.streamer import Streamer
+
 
 
 # Set up logging
@@ -40,6 +42,13 @@ LOCATION_NAME = os.getenv("LOCATION", "Calgary")
 REGION_NAME = os.getenv("REGION_NAME", "Canada")
 MIN_CORRECT_CONF = os.getenv("MIN_CORRECT_CONF", 0.75)
 MIN_UNREVIEWED_CONF = os.getenv("MIN_UNREVIEWED_CONF", 0.9)
+ENABLE_STREAMER = os.getenv("ENABLE_STREAMER", False)
+
+streamer_port = 3030
+streamer_require_login = False
+
+if ENABLE_STREAMER:
+    streamer = Streamer(streamer_port, streamer_require_login)
 
 # Database path
 DB_PATH = os.getenv('DB_PATH', '../data/model_results.db')
@@ -55,7 +64,7 @@ else:
 utc_tz = pytz.timezone('UTC')
 
 # Datetime format for printing and string representation
-dt_fmt = '%Y-%m-%dT%H:%M:%S'
+dt_fmt = '%Y-%m-%dT%H:%M:%S.%f'
 
 # Where to save captured frames with changes
 save_dir = os.path.join(DATA_DIR, 'imgs/')
@@ -65,7 +74,9 @@ os.makedirs(save_dir, exist_ok=True)
 
 # Create the Videoapture object for the webcam
 capture = cv.VideoCapture()
-capture.set(cv.CAP_PROP_FPS, 1)
+capture.set(cv.CAP_PROP_FPS, 30)
+CV_MASK_THRESH = 255   # Threhold for foreground mask: 255 indicates objects
+CV_KERNEL_SIZE = 25    # nxn kernel size for 2d median filter on foreground mask
 
 # Create the astral city location object
 city = LocationInfo(LOCATION_NAME, REGION_NAME, tz, BIRBCAM_LATITUDE, BIRBCAM_LONGITUDE) 
@@ -74,8 +85,7 @@ city = LocationInfo(LOCATION_NAME, REGION_NAME, tz, BIRBCAM_LATITUDE, BIRBCAM_LO
 def camera_loop(queue, stop_time):
     # Model params
     # https://docs.opencv.org/master/d1/dc5/tutorial_background_subtraction.html
-    mask_thresh = 255   # Threhold for foreground mask: 255 indicates objects
-    kernel_size = 25    # nxn kernel size for 2d median filter on foreground mask
+
     lr = 0.05           # learning rate for the background sub model
     burn_in = 30        # frames of burn in for the background sub model
     i = 0               # burn in iteration tracker
@@ -88,23 +98,20 @@ def camera_loop(queue, stop_time):
     while current_time <= stop_time:
         current_time = dt.datetime.now(tz=tz)
         timestamp = current_time.strftime(dt_fmt)
-        utc_timestamp = dt.datetime.now(tz=utc_tz).strftime(dt_fmt)
+        utc_timestamp = dt.datetime.now(tz=utc_tz).strftime(dt_fmt)[:-5]
         ret, frame = capture.read()
+        if bool(ROTATE_CAMERA):
+            frame = np.rot90(frame, k=-1)
+        if ENABLE_STREAMER:
+            streamer.update_frame(frame)
+            if not streamer.is_streaming:
+                streamer.start_streaming()
         if ret:
-            if bool(ROTATE_CAMERA):
-                frame = np.rot90(frame, k=-1)
             fgMask = backSub.apply(frame, learningRate=lr)
             if i < burn_in:
                 i += 1
                 continue
-
-            # Threshold mask
-            fgMaskMedian = medfilt2d(fgMask, kernel_size)
-            if (fgMaskMedian >= mask_thresh).any():
-                # Put the frame and corresponding timestamp into the 
-                # queue to be processed by the fastai models
-                queue.put((frame, timestamp, utc_timestamp))
-                logging.info(f'Passed image with timestamp {timestamp} for processing')
+            queue.put((frame, fgMask, timestamp, utc_timestamp))
     
     # Release the webcam        
     capture.release()
@@ -149,12 +156,22 @@ def prediction_cleanup():
 def night_pause_loop(stop_time):
     prediction_cleanup()
     current_time = dt.datetime.now(tz=tz)
+    if ENABLE_STREAMER:
+        capture.open(0)
     while current_time < stop_time:
-        current_time = dt.datetime.now(tz=tz)
-        time_diff_seconds = (stop_time - current_time).total_seconds()
-        # logarithmic sleeping to reduce iterations
-        time.sleep((time_diff_seconds // 2) + 1)
+        if ENABLE_STREAMER:
+            ret, frame = capture.read()
+            streamer.update_frame(frame)
+            if not streamer.is_streaming:
+                streamer.start_streaming()
+        else:
+            # logarithmic sleeping to reduce iterations
+            current_time = dt.datetime.now(tz=tz)
+            time_diff_seconds = (stop_time - current_time).total_seconds()
+            time.sleep((time_diff_seconds // 2) + 1)
 
+    if ENABLE_STREAMER:
+        capture.release()
 
 def main_loop(queue):
     while True:
@@ -188,39 +205,42 @@ def main_loop(queue):
 
             
 def image_processor(queue, DB_PATH=DB_PATH, save_dir=save_dir, model_path=MODEL_PATH):
-    learn = load_learner(model_path)
     x = None
+    learn = load_learner(model_path)
     while True:
         try:
+            # Threshold mask
             x = queue.get()
-            # Get the frame and timestamp for the image to be processed
-            frame, timestamp, utc_timestamp = x
-            logging.debug(f'Processing image with timestamp {timestamp}')
-            # Convert the OpenCV image from BGR to RGB for fastai
-            rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+            frame, fgMask, timestamp, utc_timestamp = x
+            fgMaskMedian = medfilt2d(fgMask, CV_KERNEL_SIZE)
+            if (fgMaskMedian >= CV_MASK_THRESH).any():
+                # Get the frame and timestamp for the image to be processed
+                logging.debug(f'Processing image with timestamp {timestamp}')
+                # Convert the OpenCV image from BGR to RGB for fastai
+                rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
 
-            # Get the predicted label and confidence
-            pred = learn.predict(rgb_frame)
-            labels = pred[0] 
-            confidences = pred[2].tolist()
-            if len(labels) == 0:
-                labels = ['none']
-                confidence = 1 - max(confidences)
-            else:
-                confidence = min([c for c in confidences if c > 0.5])
-            fname_label = '_'.join(labels)
-            pred_label = ','.join(labels)
-            # Save the image with time stamp and label
-            filename = f'{timestamp}_{fname_label}.jpg'
-            filepath = f'{save_dir}{timestamp}_{fname_label}.jpg'
-            cv.imwrite(filepath, frame)
-            # Write results to sqlite3 database
-            conn = sqlite3.connect(DB_PATH, timeout=60)
-            with conn:
-                conn.execute("INSERT INTO results VALUES (?,?,?,?,?,?,?)", 
-                    (utc_timestamp, timestamp, filename, pred_label, confidence, None, None))
-            conn.close()
-            logging.info(f'Processed image with timestamp {timestamp} and found label(s) {pred_label}')
+                # Get the predicted label and confidence
+                pred = learn.predict(rgb_frame)
+                labels = pred[0] 
+                confidences = pred[2].tolist()
+                if len(labels) == 0:
+                    labels = ['none']
+                    confidence = 1 - max(confidences)
+                else:
+                    confidence = min([c for c in confidences if c > 0.5])
+                fname_label = '_'.join(labels)
+                pred_label = ','.join(labels)
+                # Save the image with time stamp and label
+                filename = f'{timestamp}_{fname_label}.jpg'
+                filepath = f'{save_dir}{timestamp}_{fname_label}.jpg'
+                cv.imwrite(filepath, frame)
+                # Write results to sqlite3 database
+                conn = sqlite3.connect(DB_PATH, timeout=60)
+                with conn:
+                    conn.execute("INSERT INTO results VALUES (?,?,?,?,?,?,?)", 
+                        (utc_timestamp, timestamp, filename, pred_label, confidence, None, None))
+                conn.close()
+                logging.info(f'Processed image with timestamp {timestamp} and found label(s) {pred_label}')
         except Exception as e:
             logging.error(traceback.format_exc())
             pass
