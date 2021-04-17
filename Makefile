@@ -29,3 +29,5 @@ test:
 create_db:
 	docker-compose run webapp python3 util.py create_db
 
+train_local:
+	docker-compose run camera python3 notebooks/local_prepare_train.py

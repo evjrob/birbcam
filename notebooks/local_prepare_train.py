@@ -7,7 +7,12 @@ from fastai.vision.all import *
 # Train using data you have locally - ideally copy the data folder from your live birbcam
 # See notebooks/birbcamtraining.ipydnb
 
+# Model artifact path
+MODEL_PATH = os.getenv('MODEL_PATH', '../models/birbcam_prod.pkl')
+
 def labeler(x):
+  """
+  """
   x = str(x)
   x = x.split('/')[-1]
   x = x.split('_')
@@ -26,6 +31,7 @@ OR (NOT (true_label = prediction)
 OR confidence < 0.75);
 ''')
 rows = c.fetchall()
+conn.close()
 sys.stdout.write(f"Number of rows to prepare: {len(rows)} \n")
 
 for row in rows:
@@ -50,9 +56,19 @@ dls = ImageDataLoaders.from_df(
     batch_tfms=aug_transforms(size=(320,240))
 )
 learn = cnn_learner(dls, resnet34, metrics=partial(accuracy_multi, thresh=0.5))
-learn.lr_find()
+
+print(learn.lr_find())
+
+# if os.path.exists(MODEL_PATH):
+#     sys.stdout.write('Loading initial weights from old model...')
+#     old_learn = load_learner(MODEL_PATH)
+#     old_learn.save('init_weights')
+#     learn.load('init_weights')
+
 mixup = MixUp(1.)
-# Use one of these?
-learn.fine_tune(10, 2e-2, cbs=mixup)
-learn.fine_tune(5, 5e-3, cbs=mixup)
+
+#Fine tune
+learn.fine_tune(10, 3e-2, cbs=mixup)
+
+# Save our model
 learn.export("/data/birbcam_prod.pkl")
