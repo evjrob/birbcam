@@ -46,6 +46,11 @@ jobs:
         with:
           arch: ${{ matrix.arch }}
           distro: ${{ matrix.distro }}
+          install: |
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sh get-docker.sh
+            apt-get install -y python3-pip
+            pip3 install docker-compose
           run: |
             docker-compose build
             docker-compose push
