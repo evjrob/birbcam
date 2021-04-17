@@ -22,39 +22,6 @@ jobs:
         run: make build
       - name: Push containers
         run: make push
-  push_exotic:
-    # The host should always be linux
-    runs-on: ubuntu-20.04
-    name: Build on ${{ matrix.distro }} ${{ matrix.arch }}
-
-    # Run steps on a matrix of 3 arch/distro combinations
-    strategy:
-      matrix:
-        include:
-          - arch: aarch64
-            distro: ubuntu20.04
-          - arch: armv7
-            distro: ubuntu20.04
-          - arch: armv6
-            distro: buster
-    steps:
-      - uses: actions/checkout@v2.1.0
-      - uses: satackey/action-docker-layer-caching@v0.0.11
-      - uses: uraimo/run-on-arch-action@v2.0.5
-        name: Build artifact
-        id: build
-        with:
-          arch: ${{ matrix.arch }}
-          distro: ${{ matrix.distro }}
-          install: |
-            curl -fsSL https://get.docker.com -o get-docker.sh
-            sh get-docker.sh
-            apt-get install -y python3-pip
-            pip3 install docker-compose
-          run: |
-            docker-compose build
-            docker-compose push
-
 
   test:
     runs-on: ubuntu-latest
