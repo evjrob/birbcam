@@ -11,6 +11,8 @@ services:
       - /opt/vc:/opt/vc
       - ./data/:/data/
       - ./notebooks/:/usr/app/notebooks/
+    ports:
+      - "9090:3030"
     devices:
       - /dev/video0:/dev/video0
     command: python3 birbcam.py
