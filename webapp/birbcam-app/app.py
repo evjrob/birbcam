@@ -343,11 +343,12 @@ def get_data():
                  WHERE datetime>=? 
                  AND datetime<=? 
                  AND (NOT true_label='none'
-                 OR (true_label IS NULL AND NOT prediction='none'));''', 
+                 OR (true_label IS NULL));''', 
                  (start_date, end_date))
     rows = c.fetchall()
     conn.close()
     result_dict = {l:[] for l in labels}
+    result_dict['unknown'] = []
     for event in rows:
         utc_dt, dt, fn, pred, conf, true_label, inat_id = event
         if true_label is not None:
@@ -371,7 +372,10 @@ def get_data():
                     'reviewed':False, 
                     'true_label':pred_labels,
                     'inat_id': inat_id}
-                result_dict[pl].append(item)
+                try:
+                    result_dict[pl].append(item)
+                except KeyError:
+                    result_dict['unknown'].append(item)
     results = []
     for k, v in result_dict.items():
         results.append({'name': k, 'data':v})
