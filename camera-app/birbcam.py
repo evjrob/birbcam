@@ -228,41 +228,42 @@ def main_loop(queue, streamer_queue):
 
             
 def image_processor(queue, DB_PATH=DB_PATH, save_dir=save_dir, model_path=MODEL_PATH):
-    x = None
     learn = load_learner(model_path)
-    try:
-        x = queue.get()
-        # Get the frame and timestamp for the image to be processed
-        frame, timestamp, utc_timestamp = x
-        logging.debug(f'Processing image with timestamp {timestamp}')
-        # Convert the OpenCV image from BGR to RGB for fastai
-        rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+    x = None
+    while True:
+        try:
+            x = queue.get()
+            # Get the frame and timestamp for the image to be processed
+            frame, timestamp, utc_timestamp = x
+            logging.debug(f'Processing image with timestamp {timestamp}')
+            # Convert the OpenCV image from BGR to RGB for fastai
+            rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
 
-        # Get the predicted label and confidence
-        pred = learn.predict(rgb_frame)
-        labels = pred[0] 
-        confidences = pred[2].tolist()
-        if len(labels) == 0:
-            labels = ['none']
-            confidence = 1 - max(confidences)
-        else:
-            confidence = min([c for c in confidences if c > 0.5])
-        fname_label = '_'.join(labels)
-        pred_label = ','.join(labels)
-        # Save the image with time stamp and label
-        filename = f'{timestamp}_{fname_label}.jpg'
-        filepath = f'{save_dir}{timestamp}_{fname_label}.jpg'
-        cv.imwrite(filepath, frame)
-        # Write results to sqlite3 database
-        conn = sqlite3.connect(DB_PATH, timeout=60)
-        with conn:
-            conn.execute("INSERT INTO results VALUES (?,?,?,?,?,?,?)", 
-                (utc_timestamp, timestamp, filename, pred_label, confidence, None, None))
-        conn.close()
-        logging.info(f'Processed image with timestamp {timestamp} and found label(s) {pred_label}')
-    except Exception as e:
-        logging.error(traceback.format_exc())
-        pass
+            # Get the predicted label and confidence
+            pred = learn.predict(rgb_frame)
+            labels = pred[0] 
+            confidences = pred[2].tolist()
+            if len(labels) == 0:
+                labels = ['none']
+                confidence = 1 - max(confidences)
+            else:
+                confidence = min([c for c in confidences if c > 0.5])
+            fname_label = '_'.join(labels)
+            pred_label = ','.join(labels)
+            # Save the image with time stamp and label
+            filename = f'{timestamp}_{fname_label}.jpg'
+            filepath = f'{save_dir}{timestamp}_{fname_label}.jpg'
+            cv.imwrite(filepath, frame)
+            # Write results to sqlite3 database
+            conn = sqlite3.connect(DB_PATH, timeout=60)
+            with conn:
+                conn.execute("INSERT INTO results VALUES (?,?,?,?,?,?,?)",
+                    (utc_timestamp, timestamp, filename, pred_label, confidence, None, None))
+            conn.close()
+            logging.info(f'Processed image with timestamp {timestamp} and found label(s) {pred_label}')
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            pass
 
 
 def main():
