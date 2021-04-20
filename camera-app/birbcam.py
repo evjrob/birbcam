@@ -220,7 +220,7 @@ def main_loop(queue, streamer_queue):
                 tomorrow_sun_times = sun(city.observer, date=dt.datetime.now(tz=tz) + dt.timedelta(days=1), tzinfo=tz)
                 tomorrow_start = tomorrow_sun_times['dawn']
                 logging.info(f'Delaying the cature of images until dawn at {tomorrow_start:{dt_fmt}}')
-                night_pause_loop(tomorrow_start)
+                night_pause_loop(tomorrow_start, streamer_queue)
         except Exception as e:
             logging.error(traceback.format_exc())
             pass
