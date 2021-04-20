@@ -77,7 +77,10 @@ os.makedirs(save_dir, exist_ok=True)
 
 # Create the Videoapture object for the webcam
 capture = cv.VideoCapture()
-capture.set(cv.CAP_PROP_FPS, 1)
+
+# Camera and video settings
+capture.set(cv.CAP_PROP_FPS, int(os.getenv("BIRBCAM_CAMERA_FPS", "1"))) # Camera FPS
+BIRBCAM_DETECTION_RATE = int(os.getenv("BIRBCAM DETECTION RATE", "1")) # Divisor for how many camera frames go to detector
 CV_MASK_THRESH = 255   # Threhold for foreground mask: 255 indicates objects
 CV_KERNEL_SIZE = 25    # nxn kernel size for 2d median filter on foreground mask
 
@@ -85,13 +88,14 @@ CV_KERNEL_SIZE = 25    # nxn kernel size for 2d median filter on foreground mask
 city = LocationInfo(LOCATION_NAME, REGION_NAME, tz, BIRBCAM_LATITUDE, BIRBCAM_LONGITUDE) 
 
 
-def camera_loop(queue, stop_time):
+def camera_loop(queue, streamer_queue, stop_time):
     # Model params
     # https://docs.opencv.org/master/d1/dc5/tutorial_background_subtraction.html
 
     lr = 0.05           # learning rate for the background sub model
     burn_in = 30        # frames of burn in for the background sub model
     i = 0               # burn in iteration tracker
+    frame_number = 0
     # Create the background subtraction model
     backSub = cv.createBackgroundSubtractorMOG2()
     #backSub = cv.createBackgroundSubtractorKNN()
@@ -103,25 +107,25 @@ def camera_loop(queue, stop_time):
         timestamp = current_time.strftime(dt_fmt)
         utc_timestamp = dt.datetime.now(tz=utc_tz).strftime(dt_fmt)[:-5]
         ret, frame = capture.read()
-        if bool(ROTATE_CAMERA):
-            frame = np.rot90(frame, k=-1)
-        if ENABLE_STREAMER:
-            streamer.update_frame(frame)
-            if not streamer.is_streaming:
-                streamer.start_streaming()
         if ret:
-            fgMask = backSub.apply(frame, learningRate=lr)
-            if i < burn_in:
-                i += 1
-                continue
+            frame_number += 1
+            if bool(ROTATE_CAMERA):
+                frame = np.rot90(frame, k=-1)
+            if ENABLE_STREAMER:
+                streamer_queue.put(frame)
+            if frame_number % BIRBCAM_DETECTION_RATE == 0:
+                fgMask = backSub.apply(frame, learningRate=lr)
+                if i < burn_in:
+                    i += 1
+                    continue
 
-            # Threshold mask
-            fgMaskMedian = medfilt2d(fgMask, CV_KERNEL_SIZE)
-            if (fgMaskMedian >= CV_MASK_THRESH).any():
-                # Put the frame and corresponding timestamp into the 
-                # queue to be processed by the fastai models
-                queue.put((frame, timestamp, utc_timestamp))
-                logging.info(f'Passed image with timestamp {timestamp} for processing')
+                # Threshold mask
+                fgMaskMedian = medfilt2d(fgMask, CV_KERNEL_SIZE)
+                if (fgMaskMedian >= CV_MASK_THRESH).any():
+                    # Put the frame and corresponding timestamp into the
+                    # queue to be processed by the fastai models
+                    queue.put((frame, timestamp, utc_timestamp))
+                    logging.info(f'Passed image with timestamp {timestamp} for processing')
     
     # Release the webcam        
     capture.release()
@@ -163,7 +167,7 @@ def prediction_cleanup():
     conn.close()
 
 
-def night_pause_loop(stop_time):
+def night_pause_loop(stop_time, streamer_queue):
     prediction_cleanup()
     current_time = dt.datetime.now(tz=tz)
     if ENABLE_STREAMER:
@@ -171,9 +175,7 @@ def night_pause_loop(stop_time):
     while current_time < stop_time:
         if ENABLE_STREAMER:
             ret, frame = capture.read()
-            streamer.update_frame(frame)
-            if not streamer.is_streaming:
-                streamer.start_streaming()
+            streamer_queue.put(frame)
         else:
             # logarithmic sleeping to reduce iterations
             current_time = dt.datetime.now(tz=tz)
@@ -183,7 +185,18 @@ def night_pause_loop(stop_time):
     if ENABLE_STREAMER:
         capture.release()
 
-def main_loop(queue):
+def streamer_loop(streamer_queue):
+    while True:
+        try:
+            frame = streamer_queue.get()
+            streamer.update_frame(frame)
+            if not streamer.is_streaming:
+                streamer.start_streaming()
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            pass
+
+def main_loop(queue, streamer_queue):
     while True:
         try:
             # Figure out when to run the webcam based on dawn and dusk today
@@ -195,12 +208,12 @@ def main_loop(queue):
             # If current time is less than dawn today, then wait until then
             if current_time < today_start:
                 logging.info(f'Delaying the cature of images until dawn at {today_start:{dt_fmt}}')
-                night_pause_loop(today_start)
+                night_pause_loop(today_start, streamer_queue)
             
             # We can capture images, start the camera loop until sunset today
             elif current_time >= today_start and current_time <= today_end:
                 logging.info(f'Capturing images until dusk at {today_end:{dt_fmt}}')
-                camera_loop(queue, today_end)
+                camera_loop(queue, streamer_queue, today_end)
             
             # Pause image capture until dawn tomorrow
             elif current_time > today_end:
@@ -258,15 +271,22 @@ def main():
     # blocked and missing frames.
     m = mp.Manager()
     q = m.Queue()
+    streamer_queue = m.Queue()
     pool = mp.Pool(WORKER_PROC)
-    p1 = mp.Process(target=main_loop, args=(q,))
+    p1 = mp.Process(target=main_loop, args=(q,streamer_queue))
+    if ENABLE_STREAMER:
+        streamer_process = mp.Process(target=streamer_loop, args=(streamer_queue,))
     workers = []
     for i in range(WORKER_PROC):
         workers.append(
             pool.apply_async(image_processor, (q,))
         )
     p1.start()
+    if ENABLE_STREAMER:
+        streamer_process.start()
     p1.join()
+    if ENABLE_STREAMER:
+        streamer_process.join()
     [output.get() for output in workers]
 
 if __name__ == '__main__':
