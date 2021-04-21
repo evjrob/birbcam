@@ -88,10 +88,9 @@ CV_KERNEL_SIZE = 25    # nxn kernel size for 2d median filter on foreground mask
 city = LocationInfo(LOCATION_NAME, REGION_NAME, tz, BIRBCAM_LATITUDE, BIRBCAM_LONGITUDE) 
 
 
-def camera_loop(queue, streamer_queue, stop_time):
+def camera_loop(streamer_queue, stop_time):
     # Model params
     # https://docs.opencv.org/master/d1/dc5/tutorial_background_subtraction.html
-
     lr = 0.05           # learning rate for the background sub model
     burn_in = 30        # frames of burn in for the background sub model
     i = 0               # burn in iteration tracker
@@ -99,8 +98,20 @@ def camera_loop(queue, streamer_queue, stop_time):
     # Create the background subtraction model
     backSub = cv.createBackgroundSubtractorMOG2()
     #backSub = cv.createBackgroundSubtractorKNN()
+
+    # Create the workers for the processing pool
+    pool = mp.Pool(WORKER_PROC)
+    manager = mp.Manager()
+    queue = manager.Queue()
+    workers = []
+    for i in range(WORKER_PROC):
+        workers.append(
+            pool.apply_async(image_processor, (queue,))
+        )
+
     # Open the webcam
     capture.open(0)
+
     current_time = dt.datetime.now(tz=tz)
     while current_time <= stop_time:
         current_time = dt.datetime.now(tz=tz)
@@ -129,6 +140,8 @@ def camera_loop(queue, streamer_queue, stop_time):
     
     # Release the webcam        
     capture.release()
+    # Finish up workers
+    pool.close()
 
 
 def prediction_cleanup():
@@ -196,7 +209,7 @@ def streamer_loop(streamer_queue):
             logging.error(traceback.format_exc())
             pass
 
-def main_loop(queue, streamer_queue):
+def main_loop(streamer_queue):
     while True:
         try:
             # Figure out when to run the webcam based on dawn and dusk today
@@ -213,7 +226,7 @@ def main_loop(queue, streamer_queue):
             # We can capture images, start the camera loop until sunset today
             elif current_time >= today_start and current_time <= today_end:
                 logging.info(f'Capturing images until dusk at {today_end:{dt_fmt}}')
-                camera_loop(queue, streamer_queue, today_end)
+                camera_loop(streamer_queue, today_end)
             
             # Pause image capture until dawn tomorrow
             elif current_time > today_end:
@@ -232,7 +245,11 @@ def image_processor(queue, DB_PATH=DB_PATH, save_dir=save_dir, model_path=MODEL_
     x = None
     while True:
         try:
-            x = queue.get()
+            try:
+                x = queue.get()
+            except BrokenPipeError:
+                # Queue is finished so exit
+                return
             # Get the frame and timestamp for the image to be processed
             frame, timestamp, utc_timestamp = x
             logging.debug(f'Processing image with timestamp {timestamp}')
@@ -271,24 +288,16 @@ def main():
     # to other processes/cores and keep the camera_loop from being 
     # blocked and missing frames.
     m = mp.Manager()
-    q = m.Queue()
     streamer_queue = m.Queue()
-    pool = mp.Pool(WORKER_PROC)
-    p1 = mp.Process(target=main_loop, args=(q,streamer_queue))
+    p1 = mp.Process(target=main_loop, args=(streamer_queue,))
     if ENABLE_STREAMER:
         streamer_process = mp.Process(target=streamer_loop, args=(streamer_queue,))
-    workers = []
-    for i in range(WORKER_PROC):
-        workers.append(
-            pool.apply_async(image_processor, (q,))
-        )
     p1.start()
     if ENABLE_STREAMER:
         streamer_process.start()
     p1.join()
     if ENABLE_STREAMER:
         streamer_process.join()
-    [output.get() for output in workers]
 
 if __name__ == '__main__':
     main()
