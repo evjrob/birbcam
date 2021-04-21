@@ -188,7 +188,8 @@ def night_pause_loop(stop_time, streamer_queue):
     while current_time < stop_time:
         if ENABLE_STREAMER:
             ret, frame = capture.read()
-            streamer_queue.put(frame)
+            if ret:
+                streamer_queue.put(frame)
         else:
             # logarithmic sleeping to reduce iterations
             current_time = dt.datetime.now(tz=tz)
@@ -201,7 +202,12 @@ def night_pause_loop(stop_time, streamer_queue):
 def streamer_loop(streamer_queue):
     while True:
         try:
-            frame = streamer_queue.get()
+            try:
+                frame = streamer_queue.get()
+            except BrokenPipeError:
+                logging.info('Streamer queue borked...')
+                time.sleep(5)
+                continue
             streamer.update_frame(frame)
             if not streamer.is_streaming:
                 streamer.start_streaming()
