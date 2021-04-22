@@ -28,3 +28,6 @@ camera-app/tests/test_assets/*
 */client_secrets.json
 */env_params.sh
 settings.env
+
+# Proxy
+proxy/logs/*

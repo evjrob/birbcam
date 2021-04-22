@@ -6,8 +6,9 @@ import pytz
 import sqlite3
 import time
 
-from birbcam import image_processor
-from birbcam import dt_fmt, tz, utc_tz
+
+from ..birbcam import image_processor
+from ..birbcam import dt_fmt, tz, utc_tz
 
 
 def test_image_processor():
