@@ -180,24 +180,14 @@ def prediction_cleanup():
     conn.close()
 
 
-def night_pause_loop(stop_time, streamer_queue):
+def night_pause_loop(stop_time):
     prediction_cleanup()
     current_time = dt.datetime.now(tz=tz)
-    if ENABLE_STREAMER:
-        capture.open(0)
     while current_time < stop_time:
-        if ENABLE_STREAMER:
-            ret, frame = capture.read()
-            if ret:
-                streamer_queue.put(frame)
-        else:
-            # logarithmic sleeping to reduce iterations
-            current_time = dt.datetime.now(tz=tz)
-            time_diff_seconds = (stop_time - current_time).total_seconds()
-            time.sleep((time_diff_seconds // 2) + 1)
-
-    if ENABLE_STREAMER:
-        capture.release()
+        # logarithmic sleeping to reduce iterations
+        current_time = dt.datetime.now(tz=tz)
+        time_diff_seconds = (stop_time - current_time).total_seconds()
+        time.sleep((time_diff_seconds // 2) + 1)
 
 def streamer_loop(streamer_queue):
     while True:
@@ -227,7 +217,7 @@ def main_loop(streamer_queue):
             # If current time is less than dawn today, then wait until then
             if current_time < today_start:
                 logging.info(f'Delaying the cature of images until dawn at {today_start:{dt_fmt}}')
-                night_pause_loop(today_start, streamer_queue)
+                night_pause_loop(today_start)
             
             # We can capture images, start the camera loop until sunset today
             elif current_time >= today_start and current_time <= today_end:
@@ -239,7 +229,7 @@ def main_loop(streamer_queue):
                 tomorrow_sun_times = sun(city.observer, date=dt.datetime.now(tz=tz) + dt.timedelta(days=1), tzinfo=tz)
                 tomorrow_start = tomorrow_sun_times['dawn']
                 logging.info(f'Delaying the cature of images until dawn at {tomorrow_start:{dt_fmt}}')
-                night_pause_loop(tomorrow_start, streamer_queue)
+                night_pause_loop(tomorrow_start)
         except Exception as e:
             logging.error(traceback.format_exc())
             pass
