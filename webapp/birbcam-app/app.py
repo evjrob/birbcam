@@ -62,14 +62,15 @@ def brighten_image(img, minimum_brightness=0.4):
     return bright
 
 # Route for main visualization page
-@app.route('/')
+@app.route('/', methods=['GET'])
 def main_visualization_page():
-    return render_template('index.html', inat_enabled=INAT_ENABLED)
-
-# Route for diurnal visualization page
-@app.route('/diurnal')
-def diurnal_visualization_page():
-    return render_template('diurnal.html', label_options=label_options)
+    viz_type = request.args.get('viz_type', default=None)
+    if viz_type is None:
+        viz_type = 'events'
+    return render_template('index.html', 
+        viz_type=viz_type, 
+        inat_enabled=INAT_ENABLED, 
+        label_options=label_options)
 
 # Route for inaturalist api upload
 @app.route('/api/inaturalist', methods=['POST'])

@@ -1,14 +1,10 @@
-{% extends "base.html" %}
-{% block content %}
-{% set active_page = "diurnal" %}
-{% include "header.html" %}
 
 <div class="container">
     <link href="https://fonts.googleapis.com/css?family=Josefin+Sans:300" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Muli" rel="stylesheet">
     <h3>Birb Cam Diurnal Patterns</h3>
-    <h4>Filters:</h4>
     <form id="filter" action="{{ request.base_url }}" method="GET">
+        <input type="hidden" id="viz_type" name="viz_type" value="diurnal">
         <div class="row">
             <div class=" col-lg-6 col-md-10 col-sm-10 col-10">
                 <label for="species">Select a Species: {{species}}</label>
@@ -231,5 +227,3 @@
         updateChartData(startDate, endDate);
     </script>
 </div>
-
-{% endblock %}
